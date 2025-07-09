@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,7 +55,7 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
       const totalScore = data.questionAnswers.reduce((sum, qa) => sum + qa.score, 0);
       const maxScore = submission.questionAnswers.length * 10;
       const percentage = Math.round((totalScore / maxScore) * 100);
-      
+
       let grade = 'F';
       if (percentage >= 90) grade = 'A+';
       else if (percentage >= 85) grade = 'A';
@@ -154,17 +153,48 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
                 <Card key={index} className="border border-slate-200">
                   <CardContent className="p-4">
                     <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-700">Topic: {qa.topic}</Label>
-                        <p className="text-sm text-slate-600 mt-1">{qa.question}</p>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium text-slate-700">Trainee's Answer</Label>
-                        <div className="p-3 bg-slate-50 rounded-md mt-1">
-                          <p className="text-slate-900">{qa.answer}</p>
+                      <div className="mb-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-slate-900">{qa.topic}</h4>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              {qa.type === 'text' ? 'Text Answer' : 
+                               qa.type === 'multiple-choice' ? 'Multiple Choice' :
+                               qa.type === 'choose-best' ? 'Choose Best' :
+                               qa.type === 'true-false' ? 'True/False' :
+                               qa.type === 'fill-blank' ? 'Fill Blank' : 'Text Answer'}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 text-sm mt-1">{qa.question}</p>
                         </div>
-                      </div>
+
+                        {qa.options && qa.options.length > 0 && (
+                          <div className="mb-3">
+                            <Label className="text-sm font-medium text-slate-700">Available Options:</Label>
+                            <div className="mt-1 space-y-1">
+                              {qa.options.map((option: string, optIdx: number) => (
+                                <div key={optIdx} className="text-xs text-slate-600 ml-2">
+                                  • {option}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {qa.correctAnswer && (
+                          <div className="mb-3">
+                            <Label className="text-sm font-medium text-green-700">Correct Answer:</Label>
+                            <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
+                              <p className="text-green-800 text-sm">{qa.correctAnswer}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium text-slate-700">Student's Answer:</Label>
+                          <div className="mt-1 p-3 bg-slate-50 rounded border">
+                            <p className="text-slate-900">{qa.answer}</p>
+                          </div>
+                        </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -182,7 +212,7 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
                             </p>
                           )}
                         </div>
-                        
+
                         <div>
                           <Label htmlFor={`feedback-${index}`}>Feedback (Optional)</Label>
                           <Textarea

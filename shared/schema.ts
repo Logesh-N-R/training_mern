@@ -17,7 +17,14 @@ export interface Question {
   id?: string;
   date: string;
   sessionTitle: string;
-  questions: Array<{topic: string, question: string}>;
+  questions: Array<{
+    topic: string;
+    question: string;
+    type: 'text' | 'multiple-choice' | 'choose-best' | 'true-false' | 'fill-blank';
+    options?: string[];
+    correctAnswer?: string | number;
+    explanation?: string;
+  }>;
   createdBy: ObjectId;
   createdAt: Date;
 }
@@ -32,7 +39,10 @@ export interface Submission {
   questionAnswers: Array<{
     topic: string,
     question: string,
-    answer: string,
+    type: 'text' | 'multiple-choice' | 'choose-best' | 'true-false' | 'fill-blank',
+    answer: string | number,
+    options?: string[],
+    correctAnswer?: string | number,
     score?: number,
     feedback?: string
   }>;
@@ -73,7 +83,11 @@ export const questionFormSchema = z.object({
   sessionTitle: z.string().min(1),
   questions: z.array(z.object({
     topic: z.string().min(1),
-    question: z.string().min(1)
+    question: z.string().min(1),
+    type: z.enum(['text', 'multiple-choice', 'choose-best', 'true-false', 'fill-blank']),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional(),
+    explanation: z.string().optional()
   })).min(1),
 });
 
@@ -83,7 +97,10 @@ export const testFormSchema = z.object({
   questionAnswers: z.array(z.object({
     topic: z.string().min(1),
     question: z.string().min(1),
-    answer: z.string().min(1)
+    type: z.enum(['text', 'multiple-choice', 'choose-best', 'true-false', 'fill-blank']),
+    answer: z.union([z.string(), z.number()]).min(1),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional()
   })).min(1),
   overallUnderstanding: z.string().min(1),
   remarks: z.string().optional(),
@@ -93,7 +110,10 @@ export const evaluationSchema = z.object({
   questionAnswers: z.array(z.object({
     topic: z.string(),
     question: z.string(),
-    answer: z.string(),
+    type: z.enum(['text', 'multiple-choice', 'choose-best', 'true-false', 'fill-blank']),
+    answer: z.union([z.string(), z.number()]),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional(),
     score: z.number().min(0).max(100),
     feedback: z.string().optional()
   })),

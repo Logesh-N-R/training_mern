@@ -432,7 +432,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className="text-xs font-medium text-slate-700 mb-1">Date</p>
@@ -570,10 +570,19 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                   <label className="text-sm font-medium text-slate-700">Questions & Answers</label>
                   <div className="space-y-3 mt-2">
                     {selectedSubmission.questionAnswers.map((qa, index) => (
-                      <div key={index} className="p-4 border border-slate-200 rounded-md">
+                      <div className="p-4 border border-slate-200 rounded-md">
                         <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium text-slate-700">{qa.topic}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="font-medium text-slate-700">{qa.topic}</p>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                {qa.type === 'text' ? 'Text' : 
+                                 qa.type === 'multiple-choice' ? 'Multiple Choice' :
+                                 qa.type === 'choose-best' ? 'Choose Best' :
+                                 qa.type === 'true-false' ? 'True/False' :
+                                 qa.type === 'fill-blank' ? 'Fill Blank' : 'Text'}
+                              </span>
+                            </div>
                             <p className="text-sm text-slate-600">{qa.question}</p>
                           </div>
                           {qa.score !== undefined && (
@@ -582,8 +591,29 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                             </Badge>
                           )}
                         </div>
+
+                        {qa.options && qa.options.length > 0 && (
+                          <div className="mt-2">
+                            <label className="text-xs font-medium text-slate-700">Options:</label>
+                            <div className="mt-1 space-y-1">
+                              {qa.options.map((option: string, optIdx: number) => (
+                                <div key={optIdx} className="text-xs text-slate-600 ml-2">
+                                  • {option}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {qa.correctAnswer && (
+                          <div className="mt-2">
+                            <label className="text-xs font-medium text-green-700">Correct Answer:</label>
+                            <p className="text-green-800 text-sm mt-1 font-medium">{qa.correctAnswer}</p>
+                          </div>
+                        )}
+
                         <div className="mt-2">
-                          <label className="text-xs font-medium text-slate-700">Answer:</label>
+                          <label className="text-xs font-medium text-slate-700">Student's Answer:</label>
                           <p className="text-slate-900 mt-1">{qa.answer}</p>
                         </div>
                         {qa.feedback && (

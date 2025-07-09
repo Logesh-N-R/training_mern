@@ -1,26 +1,16 @@
-import React from "react";
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Calendar, Send, Save, GraduationCap } from "lucide-react";
-import { ApiService } from "@/services/api";
-import { Question } from "@shared/schema";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { ApiService } from '@/services/api';
+import { testFormSchema, type TestFormData } from '@shared/schema';
+import { QuestionRenderer } from '@/components/question-renderer';
+import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 const testFormSchema = z.object({
   questionAnswers: z.array(
@@ -155,13 +145,20 @@ export function TestForm() {
     }
   }, [allQuestions, form]);
 
-  const onSubmit = async (data: TestFormData) => {
-    setIsSubmitting(true);
-    try {
-      await submitMutation.mutateAsync(data);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const onSubmit = (data: TestFormData) => {
+    const submissionData = {
+      ...data,
+      questionAnswers: data.questionAnswers.map((qa, index) => ({
+        topic: allQuestions[index].topic,
+        question: allQuestions[index].question,
+        type: allQuestions[index].type,
+        answer: qa.answer,
+        options: allQuestions[index].options,
+        correctAnswer: allQuestions[index].correctAnswer,
+      })),
+    };
+
+    submitMutation.mutate(submissionData);
   };
 
   // All hooks are called above - now we can have conditional returns
@@ -254,51 +251,19 @@ export function TestForm() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    {questions.map((question: any, questionIndex: number) => (
-                      <div
-                        key={question.originalIndex}
-                        className="p-4 bg-slate-50 rounded-lg border"
-                      >
-                        <div className="flex items-start mb-3">
-                          <Badge
-                            variant="secondary"
-                            className="mr-3 mt-1 bg-slate-200 text-slate-700"
-                          >
-                            Q{questionIndex + 1}
-                          </Badge>
-                          <div className="flex-1">
-                            <p className="text-slate-900 font-medium mb-3">
-                              {question.question}
-                            </p>
-                            <Textarea
-                              rows={4}
-                              placeholder="Enter your answer here..."
-                              className="resize-none bg-white border-slate-300 focus:border-primary"
-                              {...register(
-                                `questionAnswers.${question.originalIndex}.answer`,
-                              )}
-                              onChange={(e) => {
-                                setValue(
-                                  `questionAnswers.${question.originalIndex}`,
-                                  {
-                                    topic: question.topic,
-                                    question: question.question,
-                                    answer: e.target.value,
-                                  },
-                                );
-                              }}
-                            />
-                            {errors.questionAnswers?.[question.originalIndex]
-                              ?.answer && (
-                              <p className="text-red-500 text-sm mt-1">
-                                {
-                                  errors.questionAnswers[question.originalIndex]
-                                    ?.answer?.message
-                                }
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                    {questions.map((question: any, index: number) => (
+                      <div key={index} className="border border-slate-200 rounded-lg p-6">
+                        <QuestionRenderer
+                          question={question}
+                          value={watch(`questionAnswers.${index}.answer`) || ''}
+                          onChange={(value) => setValue(`questionAnswers.${index}.answer`, value)}
+                          questionIndex={index}
+                        />
+                        {errors.questionAnswers?.[index]?.answer && (
+                          <p className="text-red-500 text-sm mt-2">
+                            {errors.questionAnswers[index]?.answer?.message}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </form>
@@ -306,7 +271,7 @@ export function TestForm() {
               </Card>
             ),
           );
-        }, [allQuestions, register, setValue, errors])}
+        }, [allQuestions, register, setValue, errors, watch, handleSubmit, onSubmit])}
 
         {/* Submission Form Controls */}
         {allQuestions.length > 0 && (
