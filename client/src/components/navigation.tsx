@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation } from "wouter";
@@ -57,15 +56,15 @@ export function Navigation() {
 
   const handleNavClick = (item: any) => {
     setIsMobileMenuOpen(false);
-    
+
     // Set active section for highlighting
     setActiveSection(item.section || "");
-    
+
     // Emit custom event for section navigation
     window.dispatchEvent(new CustomEvent('navigation-section-change', {
       detail: { section: item.section || "" }
     }));
-    
+
     // Handle section-specific navigation
     if (item.section && item.href === location) {
       // If we're already on the page, scroll to the section
@@ -78,7 +77,7 @@ export function Navigation() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       toast({
         title: "Error",
@@ -98,7 +97,7 @@ export function Navigation() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
@@ -154,7 +153,7 @@ export function Navigation() {
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
                 const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
-                
+
                 return (
                   <Link
                     key={`${item.href}-${index}`}
@@ -239,7 +238,7 @@ export function Navigation() {
                           required
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="new-password">New Password</Label>
                         <Input
@@ -252,7 +251,7 @@ export function Navigation() {
                           minLength={6}
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm New Password</Label>
                         <Input
@@ -265,7 +264,7 @@ export function Navigation() {
                           minLength={6}
                         />
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2">
                         <Button
                           type="button"
@@ -317,7 +316,7 @@ export function Navigation() {
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
                 const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
-                
+
                 return (
                   <Link
                     key={`mobile-${item.href}-${index}`}
@@ -334,7 +333,7 @@ export function Navigation() {
                   </Link>
                 );
               })}
-              
+
               <div className="border-t border-slate-200 pt-3 mt-3">
                 <div className="px-3 py-2">
                   <div className="flex items-center space-x-3">
@@ -396,7 +395,7 @@ export function Navigation() {
                             required
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label htmlFor="new-password-mobile">New Password</Label>
                           <Input
@@ -409,7 +408,7 @@ export function Navigation() {
                             minLength={6}
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label htmlFor="confirm-password-mobile">Confirm New Password</Label>
                           <Input
@@ -422,7 +421,7 @@ export function Navigation() {
                             minLength={6}
                           />
                         </div>
-                        
+
                         <div className="flex justify-end space-x-2">
                           <Button
                             type="button"

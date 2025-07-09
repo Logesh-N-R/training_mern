@@ -82,7 +82,7 @@ export default function SuperAdminPanel() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Super Admin Panel</h2>
+          {/* Navigation handled by Navigation component */}
         </div>
 
         {/* Tests Module */}
@@ -250,9 +250,20 @@ export default function SuperAdminPanel() {
           </div>
         )}
 
-         {activeSection === "questionUploader" && (
-          <div id="questionUploader" className="mt-6">
-            <QuestionUploader />
+         {/* Upload Questions Module */}
+        {activeSection === "upload" && (
+          <div id="upload" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <HelpCircle className="w-5 h-5 mr-2" />
+                  Upload Questions for Daily Tests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuestionUploader />
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -302,7 +313,7 @@ export default function SuperAdminPanel() {
                         <Button
                           variant="outline"
                           className="justify-start"
-                          onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'questionUploader' } }))}
+                          onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'upload' } }))}
                         >
                           <HelpCircle className="w-4 h-4 mr-2" />
                           Upload Questions
