@@ -1,4 +1,4 @@
-import { Router, Route, Switch } from 'wouter';
+import { Router, Route, Switch, Navigate } from 'wouter';
 import { AuthProvider } from '@/context/AuthContext';
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/login';
@@ -18,8 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Clock, FileSpreadsheet } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-function Router() {
+function AppRouter() {
   const { user } = useAuth();
   const submissions = []; //Dummy data just to avoid error
 
@@ -163,7 +165,9 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <Toaster />
-          <Router />
+          <Router>
+            <AppRouter />
+          </Router>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
