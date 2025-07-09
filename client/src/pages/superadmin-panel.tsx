@@ -17,7 +17,21 @@ import { QAModule } from '@/components/qa-module';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
-  const [activeSection, setActiveSection] = useState("tests");
+  const [activeSection, setActiveSection] = useState("dashboard");
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "dashboard");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
+
+  if (!user || user.role !== 'superadmin') {
+    return <div>Access denied</div>;
+  }
+
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     totalAdmins: 0,
@@ -42,15 +56,6 @@ export default function SuperAdminPanel() {
   });
 
   useEffect(() => {
-    const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "tests");
-    };
-
-    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
-  }, []);
-
-  useEffect(() => {
     if (users.length > 0) {
       const admins = users.filter((u: User) => u.role === 'admin');
       const superAdmins = users.filter((u: User) => u.role === 'superadmin');
@@ -65,10 +70,6 @@ export default function SuperAdminPanel() {
       });
     }
   }, [users, submissions, questions]);
-
-  if (!user || user.role !== 'superadmin') {
-    return null;
-  }
 
   const systemStatsMemo = useMemo(() => {
     const totalUsers = users.length;

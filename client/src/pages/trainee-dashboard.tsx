@@ -26,11 +26,6 @@ export default function TraineeDashboard() {
     queryFn: () => ApiService.get('/api/submissions/my'),
   });
 
-  const { data: questions = [] } = useQuery({
-    queryKey: ['/api/questions/today'],
-    queryFn: () => ApiService.get('/api/questions/today'),
-  });
-
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
       setActiveSection(event.detail.section || "test");
@@ -40,6 +35,7 @@ export default function TraineeDashboard() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
+  // Move conditional returns after all hooks
   if (!user) {
     return <div>Loading...</div>;
   }
