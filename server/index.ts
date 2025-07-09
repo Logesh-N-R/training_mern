@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { connectToDatabase } from "./db";
+import cors from "cors";
+import path from "path";
+import multer from "multer";
 
 const app = express();
 app.use(express.json());
@@ -40,10 +43,10 @@ app.use((req, res, next) => {
   // Initialize MongoDB connection and super admin
   const { connectToDatabase } = await import('./db');
   await connectToDatabase();
-  
+
   const { storage } = await import('./storage');
   await storage.initializeSuperAdmin();
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -53,6 +56,30 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Configure multer for file uploads
+  const storage = multer.memoryStorage();
+  const upload = multer({ 
+    storage,
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.includes('presentation') || 
+          file.originalname.endsWith('.ppt') || 
+          file.originalname.endsWith('.pptx')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PowerPoint files are allowed'));
+      }
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024 // 10MB limit
+    }
+  });
+
+  app.use(express.json());
+  app.use(express.static("dist"));
+
+  // Add multer middleware for file upload routes
+  app.use('/api/ai/generate-questions', upload.single('file'));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

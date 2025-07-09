@@ -98,7 +98,7 @@ export const testFormSchema = z.object({
     topic: z.string().min(1),
     question: z.string().min(1),
     type: z.enum(['text', 'multiple-choice', 'choose-best', 'true-false', 'fill-blank']),
-    answer: z.union([z.string(), z.number()]).min(1),
+    answer: z.union([z.string().min(1), z.number()]),
     options: z.array(z.string()).optional(),
     correctAnswer: z.union([z.string(), z.number()]).optional()
   })).min(1),

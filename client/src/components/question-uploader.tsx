@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ApiService } from '@/services/api';
 import { questionFormSchema, type QuestionFormData } from '@shared/schema';
-import { Plus, Trash2, Upload, Calendar } from 'lucide-react';
+import { Plus, Trash2, Upload, Calendar, Brain, FileText, Sparkles } from 'lucide-react';
 
 interface TopicSection {
   topic: string;
@@ -40,6 +40,10 @@ export function QuestionUploader() {
       }] 
     }
   ]);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const { data: existingQuestions = [] } = useQuery({
     queryKey: ['/api/questions'],
@@ -81,6 +85,62 @@ export function QuestionUploader() {
       toast({
         title: 'Error',
         description: error.response?.data?.message || 'Failed to upload questions',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const generateQuestionsMutation = useMutation({
+    mutationFn: (data: { file?: File; prompt: string; questionTypes: string[] }) => {
+      const formData = new FormData();
+      if (data.file) {
+        formData.append('file', data.file);
+      }
+      formData.append('prompt', data.prompt);
+      formData.append('questionTypes', JSON.stringify(data.questionTypes));
+      return ApiService.post('/api/ai/generate-questions', formData);
+    },
+    onSuccess: (generatedQuestions: any) => {
+      toast({
+        title: 'Success',
+        description: `Generated ${generatedQuestions.length} questions successfully`,
+      });
+      
+      // Convert AI generated questions to our format
+      const newTopicSections = generatedQuestions.reduce((acc: TopicSection[], q: any) => {
+        const existingTopic = acc.find(section => section.topic === q.topic);
+        if (existingTopic) {
+          existingTopic.questions.push({
+            question: q.question,
+            type: q.type,
+            options: q.options || [''],
+            correctAnswer: q.correctAnswer || '',
+            explanation: q.explanation || ''
+          });
+        } else {
+          acc.push({
+            topic: q.topic,
+            questions: [{
+              question: q.question,
+              type: q.type,
+              options: q.options || [''],
+              correctAnswer: q.correctAnswer || '',
+              explanation: q.explanation || ''
+            }]
+          });
+        }
+        return acc;
+      }, []);
+      
+      setTopicSections(newTopicSections);
+      setShowAIGenerator(false);
+      setAiPrompt('');
+      setUploadedFile(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to generate questions',
         variant: 'destructive',
       });
     },
@@ -230,15 +290,148 @@ export function QuestionUploader() {
     return ['multiple-choice', 'choose-best', 'true-false'].includes(type);
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.includes('presentation') || file.name.endsWith('.pptx') || file.name.endsWith('.ppt')) {
+        setUploadedFile(file);
+      } else {
+        toast({
+          title: 'Invalid File',
+          description: 'Please upload a PowerPoint file (.ppt or .pptx)',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleGenerateQuestions = () => {
+    if (!aiPrompt.trim() && !uploadedFile) {
+      toast({
+        title: 'Missing Input',
+        description: 'Please provide either a PowerPoint file or a text prompt',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const questionTypes = ['multiple-choice', 'choose-best', 'true-false', 'text', 'fill-blank'];
+    
+    setIsGenerating(true);
+    generateQuestionsMutation.mutate({
+      file: uploadedFile || undefined,
+      prompt: aiPrompt,
+      questionTypes
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Upload className="w-5 h-5 mr-2" />
-          Upload Questions for Daily Test
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Upload className="w-5 h-5 mr-2" />
+            Upload Questions for Daily Test
+          </div>
+          <Button
+            type="button"
+            onClick={() => setShowAIGenerator(!showAIGenerator)}
+            variant="outline"
+            size="sm"
+            className="flex items-center"
+          >
+            <Brain className="w-4 h-4 mr-1" />
+            Ask AI
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* AI Question Generator */}
+        {showAIGenerator && (
+          <Card className="mb-6 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-700">
+                <Sparkles className="w-5 h-5 mr-2" />
+                AI Question Generator
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="ppt-upload">Upload PowerPoint Presentation (Optional)</Label>
+                <div className="mt-2 flex items-center space-x-2">
+                  <Input
+                    id="ppt-upload"
+                    type="file"
+                    accept=".ppt,.pptx"
+                    onChange={handleFileUpload}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {uploadedFile && (
+                    <div className="flex items-center text-sm text-green-600">
+                      <FileText className="w-4 h-4 mr-1" />
+                      {uploadedFile.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="ai-prompt">Additional Instructions (Optional)</Label>
+                <Textarea
+                  id="ai-prompt"
+                  placeholder="e.g., Generate questions about React hooks, focus on useState and useEffect. Include practical examples..."
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={3}
+                  className="mt-2"
+                />
+              </div>
+
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  onClick={handleGenerateQuestions}
+                  disabled={isGenerating || generateQuestionsMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isGenerating || generateQuestionsMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-4 h-4 mr-2" />
+                      Generate Questions
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowAIGenerator(false);
+                    setAiPrompt('');
+                    setUploadedFile(null);
+                  }}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              <div className="text-xs text-slate-600 bg-white/50 p-3 rounded-md">
+                <p className="font-medium mb-1">💡 Tips for better results:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Upload PowerPoint files for content-based questions</li>
+                  <li>Be specific in your instructions (topics, difficulty level, question types)</li>
+                  <li>AI will generate a mix of question types: multiple choice, true/false, text answers, etc.</li>
+                  <li>You can edit generated questions before uploading</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

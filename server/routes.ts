@@ -468,6 +468,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Question Generation routes
+  app.post('/api/ai/generate-questions', authenticateToken, requireRole(['admin', 'superadmin']), async (req: AuthRequest, res) => {
+    try {
+      const { prompt, questionTypes } = req.body;
+      const file = (req as any).file;
+
+      if (!prompt && !file) {
+        return res.status(400).json({ message: 'Either prompt or file is required' });
+      }
+
+      let content = '';
+      
+      // Extract content from PowerPoint if file is provided
+      if (file) {
+        // TODO: Implement actual PowerPoint content extraction
+        content = `PowerPoint content extracted from ${file.originalname}. This would contain the actual slide content, text, and structure.`;
+      }
+
+      // Use AI service to generate questions
+      const { AIQuestionGenerator } = await import('./services/ai-question-generator');
+      
+      const generatedQuestions = await AIQuestionGenerator.generateQuestions({
+        content,
+        prompt,
+        questionTypes: JSON.parse(questionTypes || '["multiple-choice", "text", "true-false"]'),
+        count: 8
+      });
+
+      res.json(generatedQuestions);
+
+    } catch (error) {
+      console.error('AI question generation error:', error);
+      res.status(500).json({ message: 'Failed to generate questions' });
+    }
+  });
+
   // Q&A routes
   app.get('/api/qa/questions', authenticateToken, async (req, res) => {
     try {
