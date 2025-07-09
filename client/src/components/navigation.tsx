@@ -3,12 +3,49 @@ import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Users, ClipboardList, BarChart3, Menu, X, Upload, FileText, MessageSquare, Settings, HelpCircle, Activity, Shield, Database, UserCheck, Clock, Star, BookOpen, CheckCircle, User, ChevronDown } from "lucide-react";
+import {
+  LogOut,
+  Users,
+  ClipboardList,
+  BarChart3,
+  Menu,
+  X,
+  Upload,
+  FileText,
+  MessageSquare,
+  Settings,
+  HelpCircle,
+  Activity,
+  Shield,
+  Database,
+  UserCheck,
+  Clock,
+  Star,
+  BookOpen,
+  CheckCircle,
+  User,
+  ChevronDown,
+} from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
@@ -28,26 +65,91 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
-          { href: "/test", label: "Ask doubt", icon: HelpCircle, section: "qa" },
-          { href: "/test", label: "Tests", icon: ClipboardList, section: "test" },
-          { href: "/test", label: "History & Progress", icon: BarChart3, section: "history" },
+          {
+            href: "/test",
+            label: "Ask doubt",
+            icon: HelpCircle,
+            section: "qa",
+          },
+          {
+            href: "/test",
+            label: "Tests",
+            icon: ClipboardList,
+            section: "test",
+          },
+          {
+            href: "/test",
+            label: "History & Progress",
+            icon: BarChart3,
+            section: "history",
+          },
           { href: "/test", label: "Others", icon: Settings, section: "others" },
         ];
       case "admin":
         return [
-          { href: "/admin/dashboard", label: "Ask doubt", icon: HelpCircle, section: "qa" },
-          { href: "/admin/dashboard", label: "Tests", icon: ClipboardList, section: "tests" },
-          { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
-          { href: "/admin/dashboard", label: "User Management", icon: Users, section: "users" },
-          { href: "/admin/dashboard", label: "Others", icon: Settings, section: "others" },
+          {
+            href: "/admin/dashboard",
+            label: "Ask doubt",
+            icon: HelpCircle,
+            section: "qa",
+          },
+          {
+            href: "/admin/dashboard",
+            label: "Tests",
+            icon: ClipboardList,
+            section: "tests",
+          },
+          {
+            href: "/admin/dashboard",
+            label: "Upload Questions",
+            icon: Upload,
+            section: "upload",
+          },
+          {
+            href: "/admin/dashboard",
+            label: "User Management",
+            icon: Users,
+            section: "users",
+          },
+          {
+            href: "/admin/dashboard",
+            label: "Others",
+            icon: Settings,
+            section: "others",
+          },
         ];
       case "superadmin":
         return [
-          { href: "/superadmin", label: "Ask doubt", icon: HelpCircle, section: "qa" },
-          { href: "/superadmin", label: "Tests", icon: ClipboardList, section: "tests" },
-          { href: "/superadmin", label: "Upload Questions", icon: Upload, section: "upload" },
-          { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
-          { href: "/superadmin", label: "Others", icon: Settings, section: "others" },
+          {
+            href: "/superadmin",
+            label: "Ask doubt",
+            icon: HelpCircle,
+            section: "qa",
+          },
+          {
+            href: "/superadmin",
+            label: "Tests",
+            icon: ClipboardList,
+            section: "tests",
+          },
+          {
+            href: "/superadmin",
+            label: "Upload Questions",
+            icon: Upload,
+            section: "upload",
+          },
+          {
+            href: "/superadmin",
+            label: "User Management",
+            icon: Users,
+            section: "users",
+          },
+          {
+            href: "/superadmin",
+            label: "Others",
+            icon: Settings,
+            section: "others",
+          },
         ];
       default:
         return [];
@@ -61,20 +163,53 @@ export function Navigation() {
     setActiveSection(item.section || "");
 
     // Emit custom event for section navigation
-    window.dispatchEvent(new CustomEvent('navigation-section-change', {
-      detail: { section: item.section || "" }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("navigation-section-change", {
+        detail: { section: item.section || "" },
+      }),
+    );
 
     // Handle section-specific navigation
     if (item.section && item.href === location) {
       // If we're already on the page, scroll to the section
       const element = document.getElementById(item.section);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: "smooth" });
       }
     }
   };
+  const TrainQuestLogo = () => (
+    <svg
+      width="200"
+      height="50"
+      viewBox="0 0 280 60"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Icon (Book/Quest) */}
+      <rect x="5" y="5" width="48" height="50" rx="8" fill="#4F46E5" />
+      <path
+        d="M15 25 H38 M15 33 H38"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <circle cx="26.5" cy="19" r="2.5" fill="white" />
 
+      {/* Text: TrainQuest */}
+      <text
+        x="65"
+        y="38"
+        fontFamily="'Segoe UI', sans-serif"
+        fontSize="28"
+        fontWeight="600"
+        fill="#111827"
+      >
+        Train
+        <tspan fill="#4F46E5">Quest</tspan>
+      </text>
+    </svg>
+  );
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -99,11 +234,11 @@ export function Navigation() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
           currentPassword,
@@ -113,7 +248,7 @@ export function Navigation() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to reset password');
+        throw new Error(error.message || "Failed to reset password");
       }
 
       toast({
@@ -129,7 +264,8 @@ export function Navigation() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reset password",
+        description:
+          error instanceof Error ? error.message : "Failed to reset password",
         variant: "destructive",
       });
     } finally {
@@ -144,6 +280,7 @@ export function Navigation() {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               {/* Navigation without header text */}
+              <TrainQuestLogo />
             </div>
           </div>
 
@@ -152,7 +289,10 @@ export function Navigation() {
             <div className="ml-10 flex items-baseline space-x-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
+                const isActive =
+                  location === item.href &&
+                  (activeSection === item.section ||
+                    (!activeSection && !item.section));
 
                 return (
                   <Link
@@ -175,11 +315,21 @@ export function Navigation() {
           <div className="hidden md:flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Button
+                  variant="ghost"
+                  className="relative h-10 w-10 rounded-full"
+                >
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.profileImage || ""} alt={user.name} />
+                    <AvatarImage
+                      src={user.profileImage || ""}
+                      alt={user.name}
+                    />
                     <AvatarFallback className="bg-primary text-white">
-                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -187,7 +337,9 @@ export function Navigation() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {user.name}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
                     </p>
@@ -196,11 +348,15 @@ export function Navigation() {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem disabled>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
-                      user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
+                    <div
+                      className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                        user.role === "superadmin"
+                          ? "bg-purple-100 text-purple-800"
+                          : user.role === "admin"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                      }`}
+                    >
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                     </div>
                     <span className="text-sm">Role</span>
@@ -212,7 +368,10 @@ export function Navigation() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+                <Dialog
+                  open={isResetPasswordOpen}
+                  onOpenChange={setIsResetPasswordOpen}
+                >
                   <DialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <User className="mr-2 h-4 w-4" />
@@ -228,7 +387,9 @@ export function Navigation() {
                     </DialogHeader>
                     <form onSubmit={handleResetPassword} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="current-password">Current Password</Label>
+                        <Label htmlFor="current-password">
+                          Current Password
+                        </Label>
                         <Input
                           id="current-password"
                           type="password"
@@ -253,7 +414,9 @@ export function Navigation() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <Label htmlFor="confirm-password">
+                          Confirm New Password
+                        </Label>
                         <Input
                           id="confirm-password"
                           type="password"
@@ -275,17 +438,19 @@ export function Navigation() {
                           Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                          {isSubmitting ? 'Resetting...' : 'Reset Password'}
+                          {isSubmitting ? "Resetting..." : "Reset Password"}
                         </Button>
                       </div>
                     </form>
                   </DialogContent>
                 </Dialog>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => {
-                  e.preventDefault();
-                  logout();
-                }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    logout();
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -315,7 +480,10 @@ export function Navigation() {
             <div className="space-y-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
+                const isActive =
+                  location === item.href &&
+                  (activeSection === item.section ||
+                    (!activeSection && !item.section));
 
                 return (
                   <Link
@@ -338,9 +506,16 @@ export function Navigation() {
                 <div className="px-3 py-2">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.profileImage || ""} alt={user.name} />
+                      <AvatarImage
+                        src={user.profileImage || ""}
+                        alt={user.name}
+                      />
                       <AvatarFallback className="bg-primary text-white text-sm">
-                        {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
@@ -348,12 +523,17 @@ export function Navigation() {
                         <span className="text-sm font-medium text-slate-900">
                           {user.name}
                         </span>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        <div
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.role === "superadmin"
+                              ? "bg-purple-100 text-purple-800"
+                              : user.role === "admin"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {user.role.charAt(0).toUpperCase() +
+                            user.role.slice(1)}
                         </div>
                       </div>
                       <p className="text-xs text-slate-600">{user.email}</p>
@@ -364,7 +544,10 @@ export function Navigation() {
                   <div className="px-3 py-2 text-xs text-slate-600">
                     User ID: {user.id}
                   </div>
-                  <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+                  <Dialog
+                    open={isResetPasswordOpen}
+                    onOpenChange={setIsResetPasswordOpen}
+                  >
                     <DialogTrigger asChild>
                       <Button
                         variant="ghost"
@@ -383,9 +566,14 @@ export function Navigation() {
                           Enter your current password and choose a new one.
                         </DialogDescription>
                       </DialogHeader>
-                      <form onSubmit={handleResetPassword} className="space-y-4">
+                      <form
+                        onSubmit={handleResetPassword}
+                        className="space-y-4"
+                      >
                         <div className="space-y-2">
-                          <Label htmlFor="current-password-mobile">Current Password</Label>
+                          <Label htmlFor="current-password-mobile">
+                            Current Password
+                          </Label>
                           <Input
                             id="current-password-mobile"
                             type="password"
@@ -397,7 +585,9 @@ export function Navigation() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="new-password-mobile">New Password</Label>
+                          <Label htmlFor="new-password-mobile">
+                            New Password
+                          </Label>
                           <Input
                             id="new-password-mobile"
                             type="password"
@@ -410,7 +600,9 @@ export function Navigation() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="confirm-password-mobile">Confirm New Password</Label>
+                          <Label htmlFor="confirm-password-mobile">
+                            Confirm New Password
+                          </Label>
                           <Input
                             id="confirm-password-mobile"
                             type="password"
@@ -432,7 +624,7 @@ export function Navigation() {
                             Cancel
                           </Button>
                           <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Resetting...' : 'Reset Password'}
+                            {isSubmitting ? "Resetting..." : "Reset Password"}
                           </Button>
                         </div>
                       </form>
