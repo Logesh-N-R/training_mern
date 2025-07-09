@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LogOut, Users, ClipboardList, BarChart3, Menu, X } from "lucide-react";
+import { LogOut, Users, ClipboardList, BarChart3, Menu, X, Upload, FileText, MessageSquare, Settings, HelpCircle, Activity, Shield, Database, UserCheck, Clock, Star, BookOpen, CheckCircle } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
@@ -15,26 +16,51 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
-          { href: "/test", label: "Test", icon: ClipboardList },
-          //{ href: "/test/history", label: "History", icon: BarChart3 },
+          { href: "/test", label: "Take Test", icon: ClipboardList },
+          { href: "/test", label: "Test History", icon: Clock, section: "history" },
+          { href: "/test", label: "View Feedback", icon: MessageSquare, section: "feedback" },
+          { href: "/test", label: "Q&A Module", icon: HelpCircle, section: "qa" },
+          { href: "/test", label: "Export Data", icon: FileText, section: "export" },
+          { href: "/test", label: "Progress Tracking", icon: BarChart3, section: "progress" },
         ];
       case "admin":
         return [
           { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
-          //{ href: "/admin/questions", label: "Questions", icon: ClipboardList },
-          //{ href: "/admin/trainees", label: "Trainees", icon: Users },
+          { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
+          { href: "/admin/dashboard", label: "Manage Submissions", icon: CheckCircle, section: "submissions" },
+          { href: "/admin/dashboard", label: "Evaluate Tests", icon: Star, section: "evaluate" },
+          { href: "/admin/dashboard", label: "Trainee Management", icon: Users, section: "trainees" },
+          { href: "/admin/dashboard", label: "Q&A Module", icon: HelpCircle, section: "qa" },
+          { href: "/admin/dashboard", label: "User Tests", icon: ClipboardList, section: "usertests" },
+          { href: "/admin/dashboard", label: "Recent Activity", icon: Activity, section: "activity" },
         ];
       case "superadmin":
         return [
-          { href: "/superadmin", label: "Dashboard", icon: BarChart3 },
-          {
-            href: "/admin/dashboard",
-            label: "Admin View",
-            icon: ClipboardList,
-          },
+          { href: "/superadmin", label: "Super Admin Panel", icon: Shield },
+          { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
+          { href: "/superadmin", label: "Role Management", icon: UserCheck, section: "roles" },
+          { href: "/superadmin", label: "System Analytics", icon: Database, section: "analytics" },
+          { href: "/superadmin", label: "Submissions", icon: CheckCircle, section: "submissions" },
+          { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
+          { href: "/superadmin", label: "User Tests", icon: ClipboardList, section: "usertests" },
+          { href: "/superadmin", label: "Recent Activity", icon: Activity, section: "activity" },
+          { href: "/admin/dashboard", label: "Admin View", icon: Settings },
         ];
       default:
         return [];
+    }
+  };
+
+  const handleNavClick = (item: any) => {
+    setIsMobileMenuOpen(false);
+    
+    // Handle section-specific navigation
+    if (item.section && item.href === location) {
+      // If we're already on the page, scroll to the section
+      const element = document.getElementById(item.section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
@@ -52,18 +78,21 @@ export function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              {getNavItems().map((item) => {
+            <div className="ml-10 flex items-baseline space-x-2">
+              {getNavItems().map((item, index) => {
                 const Icon = item.icon;
+                const isActive = location === item.href || (item.section && location === item.href);
+                
                 return (
                   <Link
-                    key={item.href}
+                    key={`${item.href}-${index}`}
                     href={item.href}
-                    className={`text-slate-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium flex items-center ${
-                      location === item.href ? "text-primary" : ""
+                    className={`text-slate-700 hover:text-primary px-2 py-2 rounded-md text-xs font-medium flex items-center transition-colors ${
+                      isActive ? "text-primary bg-blue-50" : ""
                     }`}
+                    onClick={() => handleNavClick(item)}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon className="w-3 h-3 mr-1" />
                     {item.label}
                   </Link>
                 );
@@ -73,9 +102,18 @@ export function Navigation() {
 
           {/* Desktop User Info and Logout */}
           <div className="hidden md:flex items-center space-x-4">
-            <span className="text-sm text-slate-600 truncate max-w-32">
-              Welcome, {user.name}
-            </span>
+            <div className="flex items-center space-x-2">
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                'bg-green-100 text-green-800'
+              }`}>
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </div>
+              <span className="text-sm text-slate-600 truncate max-w-32">
+                {user.name}
+              </span>
+            </div>
             <Button
               onClick={logout}
               variant="outline"
@@ -106,30 +144,42 @@ export function Navigation() {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200 py-3">
-            <div className="space-y-3">
-              {getNavItems().map((item) => {
+            <div className="space-y-2">
+              {getNavItems().map((item, index) => {
                 const Icon = item.icon;
+                const isActive = location === item.href || (item.section && location === item.href);
+                
                 return (
                   <Link
-                    key={item.href}
+                    key={`mobile-${item.href}-${index}`}
                     href={item.href}
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                      location === item.href
+                      isActive
                         ? "text-primary bg-blue-50"
                         : "text-slate-700 hover:text-primary hover:bg-slate-50"
                     }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => handleNavClick(item)}
                   >
                     <Icon className="w-4 h-4 mr-3" />
                     {item.label}
                   </Link>
                 );
               })}
+              
               <div className="border-t border-slate-200 pt-3 mt-3">
                 <div className="px-3 py-2">
-                  <span className="text-sm text-slate-600 block">
-                    Welcome, {user.name}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                      user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </div>
+                    <span className="text-sm text-slate-600">
+                      {user.name}
+                    </span>
+                  </div>
                 </div>
                 <Button
                   onClick={() => {
