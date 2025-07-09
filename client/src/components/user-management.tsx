@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User } from '@shared/schema';
 
@@ -22,12 +22,23 @@ const createUserSchema = z.object({
   role: z.enum(['trainee', 'admin']),
 });
 
+const editUserSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  role: z.enum(['trainee', 'admin', 'superadmin']),
+});
+
 type CreateUserData = z.infer<typeof createUserSchema>;
+type EditUserData = z.infer<typeof editUserSchema>;
 
 export function UserManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['/api/users'],
@@ -40,6 +51,15 @@ export function UserManagement() {
       name: '',
       email: '',
       password: '',
+      role: 'trainee',
+    },
+  });
+
+  const editForm = useForm<EditUserData>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      name: '',
+      email: '',
       role: 'trainee',
     },
   });
@@ -64,6 +84,49 @@ export function UserManagement() {
     },
   });
 
+  const editUserMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: EditUserData }) => 
+      ApiService.put(`/api/users/${userId}`, data),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+      editForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const promoteUserMutation = useMutation({
+    mutationFn: (userId: string) => 
+      ApiService.put(`/api/users/${userId}`, { role: 'superadmin' }),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User promoted to superadmin successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      setIsPromoteModalOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to promote user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => ApiService.delete(`/api/users/${userId}`),
     onSuccess: () => {
@@ -72,6 +135,8 @@ export function UserManagement() {
         description: "User deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      setIsDeleteModalOpen(false);
+      setSelectedUser(null);
     },
     onError: (error) => {
       toast({
@@ -86,9 +151,41 @@ export function UserManagement() {
     createUserMutation.mutate(data);
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      deleteUserMutation.mutate(userId);
+  const onEditSubmit = (data: EditUserData) => {
+    if (selectedUser) {
+      editUserMutation.mutate({ userId: selectedUser.id, data });
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    editForm.reset({
+      name: user.name,
+      email: user.email,
+      role: user.role as 'trainee' | 'admin' | 'superadmin',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handlePromoteUser = (user: User) => {
+    setSelectedUser(user);
+    setIsPromoteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedUser) {
+      deleteUserMutation.mutate(selectedUser.id);
+    }
+  };
+
+  const confirmPromote = () => {
+    if (selectedUser) {
+      promoteUserMutation.mutate(selectedUser.id);
     }
   };
 
@@ -195,6 +292,140 @@ export function UserManagement() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Edit User Modal */}
+          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Full Name</Label>
+                  <Input
+                    id="edit-name"
+                    placeholder="Enter full name"
+                    {...editForm.register('name')}
+                  />
+                  {editForm.formState.errors.name && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.name.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-email">Email Address</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    placeholder="Enter email address"
+                    {...editForm.register('email')}
+                  />
+                  {editForm.formState.errors.email && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-role">Role</Label>
+                  <Select onValueChange={(value) => editForm.setValue('role', value as 'trainee' | 'admin' | 'superadmin')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="trainee">Trainee</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="superadmin">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {editForm.formState.errors.role && (
+                    <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.role.message}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-4 mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={editUserMutation.isPending}
+                    className="bg-primary hover:bg-blue-700"
+                  >
+                    {editUserMutation.isPending ? 'Updating...' : 'Update User'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Modal */}
+          <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-red-600">
+                  <AlertTriangle className="w-5 h-5 mr-2" />
+                  Confirm Delete
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-slate-600">
+                  Are you sure you want to delete user "{selectedUser?.name}"? This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeleteModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmDelete}
+                    disabled={deleteUserMutation.isPending}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Promote Confirmation Modal */}
+          <Dialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-orange-600">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Promote to Super Admin
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-slate-600">
+                  Are you sure you want to promote "{selectedUser?.name}" to Super Admin? 
+                  This will give them full system access.
+                </p>
+                <div className="flex justify-end space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPromoteModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmPromote}
+                    disabled={promoteUserMutation.isPending}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    {promoteUserMutation.isPending ? 'Promoting...' : 'Promote User'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -242,24 +473,26 @@ export function UserManagement() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                //setUserToPromote(user);
-                                //setIsPromoteModalOpen(true);
-                              }}
+                              onClick={() => handlePromoteUser(user)}
                               className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
                             >
                               <Shield className="w-3 h-3 mr-1" />
                               Promote
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" className="text-primary hover:text-blue-700">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-primary hover:text-blue-700"
+                            onClick={() => handleEditUser(user)}
+                          >
                             <Edit className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleDeleteUser(user)}
                             className="text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />

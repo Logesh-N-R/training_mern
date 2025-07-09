@@ -16,7 +16,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: 'Invalid credentials' });
@@ -28,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken({ id: user.id, email: user.email, role: user.role });
-      
+
       res.json({
         token,
         user: {
@@ -46,16 +46,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', async (req, res) => {
     try {
       const userData = registerSchema.parse(req.body);
-      
+
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: 'User already exists' });
       }
 
       const user = await storage.createUser({ ...userData, role: 'trainee' });
-      
+
       const token = generateToken({ id: user.id, email: user.email, role: user.role });
-      
+
       res.status(201).json({
         token,
         user: {
@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/google/callback', async (req, res) => {
     try {
       const { code } = req.query;
-      
+
       if (!code) {
         return res.redirect('/login?error=no_code');
       }
@@ -119,13 +119,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { email, name, picture } = payload;
-      
+
       if (!email || !name) {
         return res.redirect('/login?error=incomplete_profile');
       }
 
       let user = await storage.getUserByEmail(email);
-      
+
       if (!user) {
         // Create new user with Google account
         user = await storage.createUser({
@@ -137,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken({ id: user.id, email: user.email, role: user.role });
-      
+
       // Redirect to frontend with token
       res.redirect(`/login?token=${token}`);
     } catch (error) {
@@ -169,12 +169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/questions', authenticateToken, requireRole(['admin', 'superadmin']), async (req: AuthRequest, res) => {
     try {
       const { date, sessionTitle, questions } = req.body;
-      
+
       // Basic validation
       if (!date || !sessionTitle || !Array.isArray(questions)) {
         return res.status(400).json({ message: 'Invalid request data' });
       }
-      
+
       // Allow multiple admins to add questions for the same date
       // Each admin can contribute questions to the same day's test
       const question = await storage.createQuestion({
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         questions,
         createdBy: new ObjectId(req.user!.id)
       });
-      
+
       res.status(201).json(question);
     } catch (error) {
       console.error('Question upload error:', error);
@@ -195,12 +195,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       const question = await storage.updateQuestion(id, updates);
       if (!question) {
         return res.status(404).json({ message: 'Question not found' });
       }
-      
+
       res.json(question);
     } catch (error) {
       res.status(400).json({ message: 'Invalid request data' });
@@ -211,11 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteQuestion(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Question not found' });
       }
-      
+
       res.json({ message: 'Question deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
@@ -245,21 +245,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Submission request body:', req.body);
       const { questionSetId, date, sessionTitle, questionAnswers, overallUnderstanding, status, remarks } = req.body;
-      
+
       // Basic validation
       if (!questionSetId || !date || !sessionTitle || !Array.isArray(questionAnswers) || !overallUnderstanding || !status) {
         return res.status(400).json({ message: 'Invalid request data' });
       }
-      
+
       // Check if user has already submitted for this date
       const existingSubmission = await storage.getSubmissionByUserAndDate(req.user!.id, date);
-      
+
       if (existingSubmission) {
         // If submission exists and has been evaluated, don't allow resubmission
         if (existingSubmission.evaluation) {
           return res.status(400).json({ message: 'Test has already been evaluated and cannot be resubmitted' });
         }
-        
+
         // If submission exists but not evaluated, update it instead of creating new one
         const updatedSubmission = await storage.updateSubmission(existingSubmission._id.toString(), {
           questionSetId: new ObjectId(questionSetId),
@@ -270,10 +270,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           remarks,
           submittedAt: new Date()
         });
-        
+
         return res.status(200).json(updatedSubmission);
       }
-      
+
       // Create new submission if none exists
       const submission = await storage.createSubmission({
         questionSetId: new ObjectId(questionSetId),
@@ -285,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         remarks,
         userId: new ObjectId(req.user!.id)
       });
-      
+
       res.status(201).json(submission);
     } catch (error) {
       console.error('Submission validation error:', error);
@@ -297,19 +297,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       // If evaluation data is being added, set the evaluatedBy field
       if (updates.evaluation) {
         const user = await storage.getUser(req.user!.id);
         updates.evaluation.evaluatedBy = user?.name || req.user!.email;
         updates.evaluation.evaluatedAt = new Date().toISOString();
       }
-      
+
       const submission = await storage.updateSubmission(id, updates);
       if (!submission) {
         return res.status(404).json({ message: 'Submission not found' });
       }
-      
+
       res.json(submission);
     } catch (error) {
       console.error('Submission update error:', error);
@@ -321,11 +321,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteSubmission(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Submission not found' });
       }
-      
+
       res.json({ message: 'Submission deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
@@ -348,9 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createUserSchema = registerSchema.extend({
         role: z.enum(['trainee', 'admin']).optional().default('trainee')
       });
-      
+
       const userData = createUserSchema.parse(req.body);
-      
+
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: 'User already exists' });
@@ -363,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: userData.role
       });
       const { password, ...userWithoutPassword } = user;
-      
+
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       res.status(400).json({ message: 'Invalid request data' });
@@ -374,24 +374,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       // Prevent modification of existing superadmin by other superadmins (except self)
       const existingUser = await storage.getUser(id);
       if (existingUser?.role === 'superadmin' && req.user!.id !== id) {
         return res.status(403).json({ message: 'Cannot modify another superadmin account' });
       }
-      
+
       // Allow promoting users to superadmin role
       const allowedUpdates = { ...updates };
       if (allowedUpdates.role && !['trainee', 'admin', 'superadmin'].includes(allowedUpdates.role)) {
         return res.status(400).json({ message: 'Invalid role' });
       }
-      
+
       const user = await storage.updateUser(id, allowedUpdates);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -403,11 +403,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteUser(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'User not found or cannot be deleted' });
       }
-      
+
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
