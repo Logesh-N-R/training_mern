@@ -251,21 +251,24 @@ export function UserManagement() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <CardTitle>User Management</CardTitle>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Button
               onClick={exportToExcel}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              size="sm"
             >
               <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Export Excel
+              <span className="hidden sm:inline">Export Excel</span>
+              <span className="sm:hidden">Export</span>
             </Button>
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-blue-700">
+              <Button className="bg-primary hover:bg-blue-700 w-full sm:w-auto" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Create New User
+                <span className="hidden sm:inline">Create New User</span>
+                <span className="sm:hidden">Create User</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
@@ -539,77 +542,147 @@ export function UserManagement() {
             <p className="mt-2 text-slate-600">Loading users...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Role</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Created</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {users.map((user: User) => (
-                  <tr key={user.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-900">{user.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role === 'superadmin' && <Shield className="w-3 h-3 mr-1" />}
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge className="bg-green-100 text-green-800">Active</Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.role === 'superadmin' ? (
-                        <span className="text-slate-400 text-sm">Protected</span>
-                      ) : (
-                        <div className="flex space-x-2">
-                          {user.role !== 'superadmin' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handlePromoteUser(user)}
-                              className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
-                            >
-                              <Shield className="w-3 h-3 mr-1" />
-                              Promote
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-primary hover:text-blue-700"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Role</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Created</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {users.map((user: User) => (
+                    <tr key={user.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-900">{user.name}</td>
+                      <td className="px-4 py-3 text-slate-600">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <Badge className={getRoleColor(user.role)}>
+                          {user.role === 'superadmin' && <Shield className="w-3 h-3 mr-1" />}
+                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.role === 'superadmin' ? (
+                          <span className="text-slate-400 text-sm">Protected</span>
+                        ) : (
+                          <div className="flex space-x-2">
+                            {user.role !== 'superadmin' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePromoteUser(user)}
+                                className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                              >
+                                <Shield className="w-3 h-3 mr-1" />
+                                Promote
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-primary hover:text-blue-700"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {users.map((user: User) => (
+                <Card key={user.id} className="mobile-card">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h3 className="font-medium text-slate-900">{user.name}</h3>
+                          <p className="text-sm text-slate-600 break-all">{user.email}</p>
+                        </div>
+                        <Badge className={getRoleColor(user.role)}>
+                          {user.role === 'superadmin' && <Shield className="w-3 h-3 mr-1" />}
+                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">
+                          Created: {new Date(user.createdAt).toLocaleDateString()}
+                        </span>
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {user.role === 'superadmin' ? (
+                          <span className="text-slate-400 text-sm">Protected</span>
+                        ) : (
+                          <>
+                            {user.role !== 'superadmin' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePromoteUser(user)}
+                                className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 flex-1 sm:flex-none"
+                              >
+                                <Shield className="w-3 h-3 mr-1" />
+                                Promote
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-primary hover:text-blue-700 flex-1 sm:flex-none"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-500 hover:text-red-700 flex-1 sm:flex-none"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

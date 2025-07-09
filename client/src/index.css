@@ -92,10 +92,66 @@
   .mobile-text-sm {
     font-size: 0.75rem;
   }
+
+  /* Ensure buttons stack properly on mobile */
+  .mobile-button-stack {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .mobile-button-stack button {
+    width: 100%;
+  }
+
+  /* Better spacing for mobile cards */
+  .mobile-spacing {
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+  }
+
+  /* Responsive text truncation */
+  .mobile-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Even more compact for small screens */
+  .mobile-card {
+    padding: 0.75rem;
+  }
+
+  .mobile-truncate {
+    max-width: 150px;
+  }
 }
 
 /* Prevent horizontal scroll on mobile */
 html, body {
   overflow-x: hidden;
   width: 100%;
+  max-width: 100vw;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure all containers respect viewport width */
+.container, .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl {
+  max-width: 100vw;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container, .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }

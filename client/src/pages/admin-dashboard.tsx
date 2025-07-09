@@ -99,29 +99,29 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="p-4 md:p-6">
               <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-green-100 rounded-full">
-                  <ClipboardCheck className="text-green-600 text-lg md:text-xl" />
+                <div className="p-2 md:p-3 bg-green-100 rounded-full flex-shrink-0">
+                  <ClipboardCheck className="text-green-600 w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <div className="ml-3 md:ml-4">
+                <div className="ml-3 md:ml-4 min-w-0">
                   <h3 className="text-xl md:text-2xl font-bold text-slate-900">{completedTests}</h3>
-                  <p className="text-sm md:text-base text-slate-600">Completed Tests</p>
+                  <p className="text-sm md:text-base text-slate-600 truncate">Completed Tests</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="p-4 md:p-6">
               <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-purple-100 rounded-full">
-                  <Badge className="text-purple-600 text-lg md:text-xl" />
+                <div className="p-2 md:p-3 bg-purple-100 rounded-full flex-shrink-0">
+                  <Badge className="text-purple-600 w-5 h-5 md:w-6 md:h-6" />
                 </div>
-                <div className="ml-3 md:ml-4">
+                <div className="ml-3 md:ml-4 min-w-0">
                   <h3 className="text-xl md:text-2xl font-bold text-slate-900">{evaluatedTests}</h3>
-                  <p className="text-sm md:text-base text-slate-600">Evaluated Tests</p>
+                  <p className="text-sm md:text-base text-slate-600 truncate">Evaluated Tests</p>
                 </div>
               </div>
             </CardContent>

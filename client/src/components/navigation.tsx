@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LogOut, Users, ClipboardList, BarChart3 } from "lucide-react";
+import { LogOut, Users, ClipboardList, BarChart3, Menu, X } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (!user) return null;
 
@@ -42,12 +44,13 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-slate-900">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
                 Daily Training Test App
               </h1>
             </div>
           </div>
 
+          {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
               {getNavItems().map((item) => {
@@ -68,8 +71,11 @@ export function Navigation() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-slate-600">Welcome, {user.name}</span>
+          {/* Desktop User Info and Logout */}
+          <div className="hidden md:flex items-center space-x-4">
+            <span className="text-sm text-slate-600 truncate max-w-32">
+              Welcome, {user.name}
+            </span>
             <Button
               onClick={logout}
               variant="outline"
@@ -80,7 +86,67 @@ export function Navigation() {
               Logout
             </Button>
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-200 py-3">
+            <div className="space-y-3">
+              {getNavItems().map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                      location === item.href 
+                        ? "text-primary bg-blue-50" 
+                        : "text-slate-700 hover:text-primary hover:bg-slate-50"
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Icon className="w-4 h-4 mr-3" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <div className="border-t border-slate-200 pt-3 mt-3">
+                <div className="px-3 py-2">
+                  <span className="text-sm text-slate-600 block">
+                    Welcome, {user.name}
+                  </span>
+                </div>
+                <Button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mx-3 bg-primary text-white hover:bg-blue-700"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
