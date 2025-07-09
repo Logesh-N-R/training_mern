@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpen } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpen, GraduationCap } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission } from '@shared/schema';
 import * as XLSX from 'xlsx';
