@@ -1,11 +1,17 @@
 
 import { z } from 'zod';
+import { PowerPointExtractor } from './powerpoint-extractor';
+import { AIPromptTemplates } from './ai-prompt-templates';
 
 interface QuestionGenerationRequest {
   content?: string;
   prompt?: string;
   questionTypes: string[];
   count?: number;
+  file?: {
+    buffer: Buffer;
+    filename: string;
+  };
 }
 
 interface GeneratedQuestion {
@@ -20,34 +26,34 @@ interface GeneratedQuestion {
 export class AIQuestionGenerator {
   
   static async generateQuestions(request: QuestionGenerationRequest): Promise<GeneratedQuestion[]> {
-    const { content, prompt, questionTypes, count = 5 } = request;
+    const { content, prompt, questionTypes, count = 5, file } = request;
     
-    // This is where you would integrate with actual AI services
-    // For now, returning mock data that demonstrates the structure
+    let finalContent = content || '';
     
-    const systemPrompt = `You are an expert educator and test creator. Generate educational questions based on the provided content.
-
-Rules:
-1. Create diverse, meaningful questions that test understanding
-2. Include a mix of question types: ${questionTypes.join(', ')}
-3. Provide clear, accurate answers and explanations
-4. Organize questions by logical topics
-5. Ensure questions are appropriate for the content level
-
-Content: ${content || 'General topic'}
-Additional Instructions: ${prompt || 'Create comprehensive questions'}
-
-Generate ${count} questions in the following JSON format:
-[
-  {
-    "topic": "Topic Name",
-    "question": "Question text",
-    "type": "multiple-choice|text|true-false|choose-best|fill-blank",
-    "options": ["option1", "option2", "option3", "option4"], // Only for choice-based questions
-    "correctAnswer": "Correct answer",
-    "explanation": "Explanation of why this is correct"
-  }
-]`;
+    // Extract content from file if provided
+    if (file && PowerPointExtractor.isValidFile(file.filename)) {
+      try {
+        const extractedContent = await PowerPointExtractor.extractContent(file.buffer, file.filename);
+        finalContent = extractedContent;
+      } catch (error) {
+        console.error('PowerPoint extraction failed:', error);
+        // Continue with existing content or prompt
+      }
+    }
+    
+    // Generate appropriate prompts using templates
+    const systemPrompt = AIPromptTemplates.getSystemPrompt(questionTypes, count);
+    let userPrompt: string;
+    
+    if (file && finalContent) {
+      userPrompt = AIPromptTemplates.getFileBasedPrompt(file.filename, finalContent, prompt);
+    } else if (finalContent) {
+      userPrompt = AIPromptTemplates.getContentPrompt(finalContent, prompt);
+    } else if (prompt) {
+      userPrompt = AIPromptTemplates.getTopicPrompt(prompt, undefined);
+    } else {
+      userPrompt = 'Generate general educational questions covering fundamental concepts.';
+    }
 
     // TODO: Integrate with OpenAI, Google AI, or other AI services
     // Example with OpenAI:
@@ -66,69 +72,111 @@ Generate ${count} questions in the following JSON format:
     return JSON.parse(generatedContent);
     */
 
-    // Mock implementation for demonstration
-    const mockQuestions: GeneratedQuestion[] = [
-      {
-        topic: "React Fundamentals",
-        question: "What is the primary purpose of React components?",
-        type: "multiple-choice",
-        options: [
-          "To encapsulate reusable UI logic and presentation",
-          "To manage database connections",
-          "To handle server-side routing",
-          "To compile JavaScript code"
-        ],
-        correctAnswer: "To encapsulate reusable UI logic and presentation",
-        explanation: "React components are the building blocks of React applications, designed to encapsulate UI logic and presentation in reusable pieces."
-      },
-      {
-        topic: "React State Management",
-        question: "Explain the difference between state and props in React.",
-        type: "text",
-        correctAnswer: "State is internal data that a component manages and can change, while props are external data passed to a component from its parent and are read-only.",
-        explanation: "Understanding the distinction between state and props is fundamental to React development."
-      },
-      {
-        topic: "React Hooks",
-        question: "The useEffect hook can replace all lifecycle methods in class components.",
-        type: "true-false",
-        options: ["True", "False"],
-        correctAnswer: "False",
-        explanation: "While useEffect covers many lifecycle scenarios, it doesn't perfectly replace all class component lifecycle methods, particularly error boundaries."
-      },
-      {
-        topic: "React Performance",
-        question: "React.memo is used to _______ component re-renders when props haven't changed.",
-        type: "fill-blank",
-        correctAnswer: "prevent",
-        explanation: "React.memo is a higher-order component that memoizes the result and skips re-rendering if props haven't changed."
-      },
-      {
-        topic: "React Best Practices",
-        question: "Which approach is considered the best practice for handling forms in React?",
-        type: "choose-best",
-        options: [
-          "Controlled components with state management",
-          "Uncontrolled components with refs",
-          "Direct DOM manipulation",
-          "jQuery form handling"
-        ],
-        correctAnswer: "Controlled components with state management",
-        explanation: "Controlled components provide better data flow control and are the recommended React pattern for form handling."
-      }
-    ];
+    // Mock implementation that adapts to the request
+    const topics = this.extractTopicsFromContent(finalContent, userPrompt);
+    const mockQuestions: GeneratedQuestion[] = this.generateMockQuestions(topics, questionTypes, count);
 
-    return mockQuestions.slice(0, count);
+    return mockQuestions;
+  }
+
+  private static extractTopicsFromContent(content: string, prompt: string): string[] {
+    // Extract potential topics from content and prompt
+    const defaultTopics = ['Fundamentals', 'Best Practices', 'Advanced Concepts'];
+    
+    if (content.toLowerCase().includes('react')) {
+      return ['React Components', 'State Management', 'React Hooks', 'Performance'];
+    } else if (content.toLowerCase().includes('javascript')) {
+      return ['JavaScript Basics', 'ES6 Features', 'Async Programming', 'DOM Manipulation'];
+    } else if (content.toLowerCase().includes('python')) {
+      return ['Python Basics', 'Data Structures', 'Object-Oriented Programming', 'Libraries'];
+    } else if (prompt.toLowerCase().includes('database')) {
+      return ['Database Design', 'SQL Queries', 'Normalization', 'Indexing'];
+    }
+    
+    return defaultTopics;
+  }
+
+  private static generateMockQuestions(topics: string[], questionTypes: string[], count: number): GeneratedQuestion[] {
+    const questions: GeneratedQuestion[] = [];
+    const questionsPerTopic = Math.ceil(count / topics.length);
+
+    for (let i = 0; i < topics.length && questions.length < count; i++) {
+      const topic = topics[i];
+      const remainingCount = count - questions.length;
+      const questionsToGenerate = Math.min(questionsPerTopic, remainingCount);
+
+      for (let j = 0; j < questionsToGenerate; j++) {
+        const questionType = questionTypes[j % questionTypes.length] as GeneratedQuestion['type'];
+        questions.push(this.createMockQuestion(topic, questionType, j + 1));
+      }
+    }
+
+    return questions;
+  }
+
+  private static createMockQuestion(topic: string, type: GeneratedQuestion['type'], index: number): GeneratedQuestion {
+    const baseQuestion = {
+      topic,
+      explanation: `This question tests understanding of ${topic.toLowerCase()} concepts.`
+    };
+
+    switch (type) {
+      case 'multiple-choice':
+        return {
+          ...baseQuestion,
+          question: `What is a key concept in ${topic}? (Question ${index})`,
+          type,
+          options: [
+            `Correct understanding of ${topic}`,
+            `Incorrect option A`,
+            `Incorrect option B`,
+            `Incorrect option C`
+          ],
+          correctAnswer: `Correct understanding of ${topic}`
+        };
+
+      case 'true-false':
+        return {
+          ...baseQuestion,
+          question: `${topic} follows standard best practices. (Statement ${index})`,
+          type,
+          options: ['True', 'False'],
+          correctAnswer: 'True'
+        };
+
+      case 'choose-best':
+        return {
+          ...baseQuestion,
+          question: `Which is the best approach for ${topic}? (Question ${index})`,
+          type,
+          options: [
+            `Best practice for ${topic}`,
+            `Good but not optimal approach`,
+            `Acceptable alternative method`,
+            `Less preferred option`
+          ],
+          correctAnswer: `Best practice for ${topic}`
+        };
+
+      case 'fill-blank':
+        return {
+          ...baseQuestion,
+          question: `${topic} requires understanding of _______ concepts. (Question ${index})`,
+          type,
+          correctAnswer: 'fundamental'
+        };
+
+      default: // text
+        return {
+          ...baseQuestion,
+          question: `Explain the importance of ${topic} in modern development. (Question ${index})`,
+          type: 'text',
+          correctAnswer: `${topic} is important because it provides structure, maintainability, and efficiency in development processes.`
+        };
+    }
   }
 
   static async extractContentFromPowerPoint(buffer: Buffer): Promise<string> {
-    // TODO: Implement PowerPoint content extraction
-    // You could use libraries like:
-    // - mammoth (for .docx, similar libraries exist for .pptx)
-    // - node-pptx or pptx2json
-    // - Or convert to text using external tools
-    
-    // Mock implementation
-    return "Sample PowerPoint content about React development, including topics like components, state management, hooks, and best practices.";
+    return PowerPointExtractor.extractContent(buffer, 'presentation.pptx');
   }
 }
