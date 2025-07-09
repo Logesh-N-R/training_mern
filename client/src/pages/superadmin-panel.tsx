@@ -17,20 +17,12 @@ import { QAModule } from '@/components/qa-module';
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
   const [activeSection, setActiveSection] = useState("tests");
-
-  const { data: users = [] } = useQuery({
-    queryKey: ['/api/users'],
-    queryFn: () => ApiService.get('/api/users'),
-  });
-
-  const { data: submissions = [] } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
-  });
-
-  const { data: questions = [] } = useQuery({
-    queryKey: ['/api/questions'],
-    queryFn: () => ApiService.get('/api/questions'),
+  const [systemStats, setSystemStats] = useState({
+    totalUsers: 0,
+    totalAdmins: 0,
+    totalSuperAdmins: 0,
+    totalQuestions: 0,
+    totalSubmissions: 0
   });
 
   useEffect(() => {
@@ -42,17 +34,24 @@ export default function SuperAdminPanel() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
+  const { data: users = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: () => ApiService.get('/api/users'),
+  });
+
+  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
+  });
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ['/api/questions'],
+    queryFn: () => ApiService.get('/api/questions'),
+  });
+
   if (!user || user.role !== 'superadmin') {
     return null;
   }
-
-  const [systemStats, setSystemStats] = useState({
-    totalUsers: 0,
-    totalAdmins: 0,
-    totalSuperAdmins: 0,
-    totalQuestions: 0,
-    totalSubmissions: 0
-  });
 
   const systemStatsMemo = useMemo(() => {
     const totalUsers = users.length;
@@ -85,11 +84,11 @@ export default function SuperAdminPanel() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Super Admin Panel</h2>
         </div>
 
-        {/* Dashboard Module */}
-        {activeSection === "dashboard" && (
-          <div id="dashboard" className="space-y-6">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Tests Module */}
+        {activeSection === "tests" && (
+          <div id="tests" className="space-y-6">
+            {/* Test Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
@@ -108,25 +107,11 @@ export default function SuperAdminPanel() {
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <div className="p-3 bg-green-100 rounded-full">
-                      <HelpCircle className="text-green-600 text-xl" />
+                      <BarChart3 className="text-green-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalQuestions}</h3>
-                      <p className="text-slate-600">Total Questions</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-yellow-100 rounded-full">
-                      <Activity className="text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalUsers}</h3>
-                      <p className="text-slate-600">Total Users</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.completedSubmissions}</h3>
+                      <p className="text-slate-600">Completed Tests</p>
                     </div>
                   </div>
                 </CardContent>
@@ -136,38 +121,57 @@ export default function SuperAdminPanel() {
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <div className="p-3 bg-purple-100 rounded-full">
-                      <BarChart3 className="text-purple-600 text-xl" />
+                      <Shield className="text-purple-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">98%</h3>
-                      <p className="text-slate-600">System Health</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.evaluatedSubmissions}</h3>
+                      <p className="text-slate-600">Evaluated Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-yellow-100 rounded-full">
+                      <Database className="text-yellow-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalQuestions}</h3>
+                      <p className="text-slate-600">Total Questions</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
 
-        {/* Tests Module */}
-        {activeSection === "tests" && (
-          <div id="tests" className="space-y-6">
-            {/* Test Management */}
-            <UserTestsDashboard />
-          </div>
-        )}
+            {/* Test Management Sections */}
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    Test Performance Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <UserTestsDashboard userRole={user?.role} />
+                </CardContent>
+              </Card>
 
-        {/* Questions Module */}
-        {activeSection === "questions" && (
-          <div id="questions" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Question Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Manage question banks, edit existing questions, and organize test content.</p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ClipboardList className="w-5 h-5 mr-2" />
+                    Submission Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubmissionManagement userRole={user?.role} />
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 

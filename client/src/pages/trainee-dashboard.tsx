@@ -17,12 +17,7 @@ export default function TraineeDashboard() {
   const { user } = useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("dashboard");
-
-  const { data: submissions = [] } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
-  });
+  const [activeSection, setActiveSection] = useState("test");
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
@@ -38,6 +33,11 @@ export default function TraineeDashboard() {
   if (!user) {
     return <div>Loading...</div>;
   }
+
+  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
+  });
 
   if (user.role !== 'trainee') {
     return null;
@@ -106,10 +106,6 @@ export default function TraineeDashboard() {
     }
   };
 
-    const completedTests = userSubmissions.filter((s: Submission) => s.status === 'Completed').length;
-    const pendingTests = userSubmissions.filter((s: Submission) => s.status !== 'Completed').length;
-
-
   return (
     <div className="min-h-screen bg-slate-50">
       <Navigation />
@@ -119,70 +115,6 @@ export default function TraineeDashboard() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Trainee Dashboard</h2>
         </div>
 
-        {/* Dashboard Module */}
-        {activeSection === "dashboard" && (
-          <div id="dashboard" className="space-y-6">
-            {/* Dashboard Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-blue-100 rounded-full">
-                      <BookOpen className="text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{userSubmissions.length}</h3>
-                      <p className="text-slate-600">Total Tests</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-green-100 rounded-full">
-                      <CheckCircle className="text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{completedTests}</h3>
-                      <p className="text-slate-600">Completed</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-yellow-100 rounded-full">
-                      <Clock className="text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{pendingTests}</h3>
-                      <p className="text-slate-600">Pending</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-purple-100 rounded-full">
-                      <Star className="text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{averageScore}%</h3>
-                      <p className="text-slate-600">Avg Score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
         {/* Tests Module */}
         {activeSection === "test" && (
           <div id="test">
@@ -190,21 +122,7 @@ export default function TraineeDashboard() {
           </div>
         )}
 
-        {/* Questions Module */}
-        {activeSection === "questions" && (
-          <div id="questions" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Question Bank</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">View and browse available question sets and topics.</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Community Module (formerly Q&A) */}
+        {/* Q&A Module */}
         {activeSection === "qa" && (
           <div id="qa" className="mt-6">
             <QAModule currentUser={user} />
