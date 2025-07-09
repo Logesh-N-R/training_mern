@@ -19,7 +19,7 @@ export default function TraineeDashboard() {
   useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("test");
+  const [activeSection, setActiveSection] = useState("qa");
 
   const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
     queryKey: ['/api/submissions/my'],

@@ -28,25 +28,25 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
+          { href: "/test", label: "Ask doubt", icon: HelpCircle, section: "qa" },
           { href: "/test", label: "Tests", icon: ClipboardList, section: "test" },
-          { href: "/test", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/test", label: "History & Progress", icon: BarChart3, section: "history" },
           { href: "/test", label: "Others", icon: Settings, section: "others" },
         ];
       case "admin":
         return [
+          { href: "/admin/dashboard", label: "Ask doubt", icon: HelpCircle, section: "qa" },
           { href: "/admin/dashboard", label: "Tests", icon: ClipboardList, section: "tests" },
           { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
           { href: "/admin/dashboard", label: "User Management", icon: Users, section: "users" },
-          { href: "/admin/dashboard", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/admin/dashboard", label: "Others", icon: Settings, section: "others" },
         ];
       case "superadmin":
         return [
+          { href: "/superadmin", label: "Ask doubt", icon: HelpCircle, section: "qa" },
           { href: "/superadmin", label: "Tests", icon: ClipboardList, section: "tests" },
           { href: "/superadmin", label: "Upload Questions", icon: Upload, section: "upload" },
           { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
-          { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/superadmin", label: "Others", icon: Settings, section: "others" },
         ];
       default:

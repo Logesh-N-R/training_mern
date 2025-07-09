@@ -17,7 +17,7 @@ import { QAModule } from '@/components/qa-module';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState("qa");
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {

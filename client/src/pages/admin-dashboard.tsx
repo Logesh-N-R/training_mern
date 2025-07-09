@@ -23,7 +23,7 @@ export default function AdminDashboard() {
   const [selectedTrainee, setSelectedTrainee] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("tests");
+  const [activeSection, setActiveSection] = useState("qa");
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
