@@ -87,10 +87,11 @@ export function TestForm() {
   }, [questionSets]);
 
 
-  // Check if user already submitted today's test
-  const alreadySubmitted = submissions.some((submission: any) =>
+  // Check if user has already submitted for today and if it's been evaluated
+  const todaySubmission = submissions.find((submission: any) =>
     submission.date === new Date().toISOString().split('T')[0]
   );
+  const alreadySubmitted = todaySubmission && todaySubmission.evaluation;
 
   React.useEffect(() => {
     if (allQuestions.length > 0) {

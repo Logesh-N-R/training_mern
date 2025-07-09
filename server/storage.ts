@@ -82,7 +82,7 @@ export class MongoStorage implements IStorage {
 
   async initializeSuperAdmin(): Promise<void> {
     await this.initializeCollections();
-    
+
     const existingSuperAdmin = await this.usersCollection.findOne({ role: 'superadmin' });
     if (existingSuperAdmin) return;
 
@@ -98,21 +98,21 @@ export class MongoStorage implements IStorage {
 
   async getUser(id: string): Promise<User | undefined> {
     await this.initializeCollections();
-    
+
     const doc = await this.usersCollection.findOne({ _id: new ObjectId(id) });
     return doc ? this.transformDocumentToUser(doc) : undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     await this.initializeCollections();
-    
+
     const doc = await this.usersCollection.findOne({ email });
     return doc ? this.transformDocumentToUser(doc) : undefined;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
     await this.initializeCollections();
-    
+
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const userToInsert: InsertUser = {
       ...userData,
@@ -122,17 +122,17 @@ export class MongoStorage implements IStorage {
 
     const result = await this.usersCollection.insertOne(userToInsert);
     const createdUser = await this.usersCollection.findOne({ _id: result.insertedId });
-    
+
     if (!createdUser) {
       throw new Error('Failed to create user');
     }
-    
+
     return this.transformDocumentToUser(createdUser);
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
     await this.initializeCollections();
-    
+
     const updateData = { ...updates };
     delete updateData.id;
     delete updateData._id;
@@ -152,35 +152,35 @@ export class MongoStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     await this.initializeCollections();
-    
+
     const result = await this.usersCollection.deleteOne({ _id: new ObjectId(id) });
     return result.deletedCount === 1;
   }
 
   async getAllUsers(): Promise<User[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.usersCollection.find({}).toArray();
     return docs.map(doc => this.transformDocumentToUser(doc));
   }
 
   async getQuestion(id: string): Promise<Question | undefined> {
     await this.initializeCollections();
-    
+
     const doc = await this.questionsCollection.findOne({ _id: new ObjectId(id) });
     return doc ? this.transformDocumentToQuestion(doc) : undefined;
   }
 
   async getQuestionsByDate(date: string): Promise<Question[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.questionsCollection.find({ date }).toArray();
     return docs.map(doc => this.transformDocumentToQuestion(doc));
   }
 
   async createQuestion(questionData: InsertQuestion): Promise<Question> {
     await this.initializeCollections();
-    
+
     const questionToInsert: InsertQuestion = {
       ...questionData,
       createdAt: new Date(),
@@ -188,17 +188,17 @@ export class MongoStorage implements IStorage {
 
     const result = await this.questionsCollection.insertOne(questionToInsert);
     const createdQuestion = await this.questionsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!createdQuestion) {
       throw new Error('Failed to create question');
     }
-    
+
     return this.transformDocumentToQuestion(createdQuestion);
   }
 
   async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {
     await this.initializeCollections();
-    
+
     const updateData = { ...updates };
     delete updateData.id;
     delete updateData._id;
@@ -214,42 +214,42 @@ export class MongoStorage implements IStorage {
 
   async deleteQuestion(id: string): Promise<boolean> {
     await this.initializeCollections();
-    
+
     const result = await this.questionsCollection.deleteOne({ _id: new ObjectId(id) });
     return result.deletedCount === 1;
   }
 
   async getAllQuestions(): Promise<Question[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.questionsCollection.find({}).toArray();
     return docs.map(doc => this.transformDocumentToQuestion(doc));
   }
 
   async getSubmission(id: string): Promise<Submission | undefined> {
     await this.initializeCollections();
-    
+
     const doc = await this.submissionsCollection.findOne({ _id: new ObjectId(id) });
     return doc ? this.transformDocumentToSubmission(doc) : undefined;
   }
 
   async getSubmissionsByUser(userId: string): Promise<Submission[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.submissionsCollection.find({ userId: new ObjectId(userId) }).toArray();
     return docs.map(doc => this.transformDocumentToSubmission(doc));
   }
 
   async getSubmissionsByDate(date: string): Promise<Submission[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.submissionsCollection.find({ date }).toArray();
     return docs.map(doc => this.transformDocumentToSubmission(doc));
   }
 
   async createSubmission(submissionData: InsertSubmission): Promise<Submission> {
     await this.initializeCollections();
-    
+
     const submissionToInsert: InsertSubmission = {
       ...submissionData,
       submittedAt: new Date(),
@@ -257,24 +257,24 @@ export class MongoStorage implements IStorage {
 
     const result = await this.submissionsCollection.insertOne(submissionToInsert);
     const createdSubmission = await this.submissionsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!createdSubmission) {
       throw new Error('Failed to create submission');
     }
-    
+
     return this.transformDocumentToSubmission(createdSubmission);
   }
 
   async getAllSubmissions(): Promise<Submission[]> {
     await this.initializeCollections();
-    
+
     const docs = await this.submissionsCollection.find({}).toArray();
     return docs.map(doc => this.transformDocumentToSubmission(doc));
   }
 
   async updateSubmission(id: string, updates: Partial<Submission>): Promise<Submission | undefined> {
     await this.initializeCollections();
-    
+
     const updateData = { ...updates };
     delete updateData.id;
     delete updateData._id;
@@ -290,9 +290,20 @@ export class MongoStorage implements IStorage {
 
   async deleteSubmission(id: string): Promise<boolean> {
     await this.initializeCollections();
-    
+
     const result = await this.submissionsCollection.deleteOne({ _id: new ObjectId(id) });
     return result.deletedCount === 1;
+  }
+
+  async getSubmissionByUserAndDate(userId: string, date: string): Promise<Submission | null> {
+    await this.initializeCollections();
+
+    const submission = await this.submissionsCollection.findOne({ 
+      userId: new ObjectId(userId),
+      date: date
+    });
+
+    return submission ? this.transformDocumentToSubmission(submission) : null;
   }
 }
 

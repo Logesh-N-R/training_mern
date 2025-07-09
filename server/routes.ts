@@ -251,6 +251,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid request data' });
       }
       
+      // Check if user has already submitted for this date
+      const existingSubmission = await storage.getSubmissionByUserAndDate(req.user!.id, date);
+      
+      if (existingSubmission) {
+        // If submission exists and has been evaluated, don't allow resubmission
+        if (existingSubmission.evaluation) {
+          return res.status(400).json({ message: 'Test has already been evaluated and cannot be resubmitted' });
+        }
+        
+        // If submission exists but not evaluated, update it instead of creating new one
+        const updatedSubmission = await storage.updateSubmission(existingSubmission._id.toString(), {
+          questionSetId: new ObjectId(questionSetId),
+          sessionTitle,
+          questionAnswers,
+          overallUnderstanding,
+          status,
+          remarks,
+          submittedAt: new Date()
+        });
+        
+        return res.status(200).json(updatedSubmission);
+      }
+      
+      // Create new submission if none exists
       const submission = await storage.createSubmission({
         questionSetId: new ObjectId(questionSetId),
         date,
