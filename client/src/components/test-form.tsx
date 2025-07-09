@@ -35,6 +35,11 @@ interface TestFormProps {
 }
 
 export function TestForm({ questionSet, onSubmit, existingSubmission }: TestFormProps) {
+  // Early return if questionSet is not provided
+  if (!questionSet || !questionSet.questions) {
+    return <div>Loading...</div>;
+  }
+
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [overallUnderstanding, setOverallUnderstanding] = useState('');
@@ -379,3 +384,5 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
     </div>
   );
 }
+
+export default TestForm;

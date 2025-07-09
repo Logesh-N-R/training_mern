@@ -3,8 +3,8 @@ import { useAuth as useAuthContext } from '@/context/AuthContext';
 import { useLocation } from 'wouter';
 import { useEffect } from 'react';
 
-// Re-export useAuth from context as the default export
-export { useAuthContext as useAuth };
+// Re-export useAuth from context
+export const useAuth = useAuthContext;
 
 export function useAuthRedirect() {
   const { user, isLoading } = useAuthContext();
