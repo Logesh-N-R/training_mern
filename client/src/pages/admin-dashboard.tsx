@@ -4,6 +4,7 @@ import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
 import { QuestionUploader } from '@/components/question-uploader';
 import { SubmissionManagement } from '@/components/submission-management';
+import { UserTestsDashboard } from '@/components/user-tests-dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -156,6 +157,11 @@ export default function AdminDashboard() {
 
         {/* Question Upload Section */}
         <QuestionUploader />
+
+        {/* User Tests Dashboard */}
+        <div className="mt-6">
+          <UserTestsDashboard />
+        </div>
 
         {/* Submission Management */}
         <div className="mt-6">

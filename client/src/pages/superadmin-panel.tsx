@@ -3,6 +3,7 @@ import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
 import { UserManagement } from '@/components/user-management';
 import { SubmissionManagement } from '@/components/submission-management';
+import { UserTestsDashboard } from '@/components/user-tests-dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Activity, Database } from 'lucide-react';
@@ -50,6 +51,11 @@ export default function SuperAdminPanel() {
 
         {/* User Management */}
         <UserManagement />
+
+        {/* User Tests Dashboard */}
+        <div className="mt-6">
+          <UserTestsDashboard />
+        </div>
 
         {/* Submission Management */}
         <div className="mt-6">
