@@ -45,7 +45,7 @@ export function Navigation() {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
-                Daily Training Test App
+                Training Management System
               </h1>
             </div>
           </div>
@@ -114,8 +114,8 @@ export function Navigation() {
                     key={item.href}
                     href={item.href}
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                      location === item.href 
-                        ? "text-primary bg-blue-50" 
+                      location === item.href
+                        ? "text-primary bg-blue-50"
                         : "text-slate-700 hover:text-primary hover:bg-slate-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
