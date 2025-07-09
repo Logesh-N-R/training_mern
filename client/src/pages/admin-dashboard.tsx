@@ -49,6 +49,10 @@ export default function AdminDashboard() {
     queryFn: () => ApiService.get('/api/questions'),
   });
 
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    return null;
+  }
+
   const handleViewTrainee = (trainee: User) => {
     setSelectedTrainee(trainee);
     setIsViewModalOpen(true);
@@ -59,9 +63,6 @@ export default function AdminDashboard() {
     setIsEditModalOpen(true);
   };
 
-  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-    return null;
-  }
 
   const completedTests = submissions.filter((s: Submission) => s.status === 'Completed').length;
   const evaluatedTests = submissions.filter((s: Submission) => s.status === 'Evaluated').length;
@@ -309,7 +310,7 @@ export default function AdminDashboard() {
                                   </div>
                                   <Badge className="bg-green-100 text-green-800">Active</Badge>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
                                     <span className="text-slate-500">Tests Completed:</span>

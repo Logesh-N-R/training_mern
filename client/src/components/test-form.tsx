@@ -164,6 +164,7 @@ export function TestForm() {
     }
   };
 
+  // All conditional returns moved to after hooks
   if (isLoading) {
     return (
       <Card>
