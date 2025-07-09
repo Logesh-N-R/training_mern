@@ -38,6 +38,11 @@ export function TestForm() {
     queryFn: () => ApiService.get('/api/questions/today'),
   });
 
+  const { data: submissions = [] } = useQuery({
+    queryKey: ['/api/submissions/my'],
+    queryFn: () => ApiService.get('/api/submissions/my'),
+  });
+
   const form = useForm<TestFormData>({
     resolver: zodResolver(testFormSchema),
     defaultValues: {
@@ -56,6 +61,12 @@ export function TestForm() {
     month: 'long',
     day: 'numeric'
   });
+
+  // Check if user already submitted today's test
+  const todayDate = new Date().toISOString().split('T')[0];
+  const alreadySubmitted = submissions.some((submission: any) => 
+    submission.date === todayDate
+  );
 
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
@@ -114,6 +125,20 @@ export function TestForm() {
           <div className="text-center py-8">
             <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600">No test available for today</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (alreadySubmitted) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Calendar className="w-12 h-12 text-green-400 mx-auto mb-4" />
+            <p className="text-slate-600">You have already submitted today's test</p>
+            <p className="text-sm text-slate-500 mt-2">Check your submissions below for results</p>
           </div>
         </CardContent>
       </Card>

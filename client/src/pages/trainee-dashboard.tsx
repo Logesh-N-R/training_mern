@@ -127,8 +127,10 @@ export default function TraineeDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {submissions.map((submission: Submission) => (
-                      <tr key={submission.id} className="hover:bg-slate-50">
+                    {submissions
+                      .sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                      .map((submission: any) => (
+                      <tr key={submission._id || submission.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-slate-900">{formatDate(submission.date)}</td>
                         <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
                         <td className="px-4 py-3">
@@ -228,7 +230,7 @@ export default function TraineeDashboard() {
                 <div>
                   <h4 className="font-medium text-slate-900 mb-3">Question-by-Question Feedback</h4>
                   <div className="space-y-4">
-                    {selectedSubmission.questionAnswers.map((qa, index) => (
+                    {selectedSubmission.questionAnswers?.map((qa: any, index: number) => (
                       <Card key={index} className="border border-slate-200">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-3">
