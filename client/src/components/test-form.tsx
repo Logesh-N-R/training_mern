@@ -85,6 +85,14 @@ export function TestForm() {
     return todaySubmission && todaySubmission.evaluation;
   }, [todaySubmission]);
 
+  const todayDate = React.useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }, []);
+
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
       return ApiService.post('/api/submissions', {
@@ -134,14 +142,6 @@ export function TestForm() {
       setIsSubmitting(false);
     }
   };
-
-  const todayDate = React.useMemo(() => {
-    return new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }, []);
 
   if (isLoading) {
     return (
