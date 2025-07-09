@@ -144,9 +144,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
-                Training Management System
-              </h1>
+              {/* Navigation without header text */}
             </div>
           </div>
 

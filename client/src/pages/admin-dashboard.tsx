@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';

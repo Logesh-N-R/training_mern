@@ -15,10 +15,16 @@ import { Submission } from '@shared/schema';
 import * as XLSX from 'xlsx';
 
 export default function TraineeDashboard() {
-  const { user } = useAuthRedirect();
+  const { user } = useAuth();
+  useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("test");
+
+  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
+  });
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
@@ -35,10 +41,7 @@ export default function TraineeDashboard() {
     return <div>Loading...</div>;
   }
 
-  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
-  });
+
 
   if (user.role !== 'trainee') {
     return null;
