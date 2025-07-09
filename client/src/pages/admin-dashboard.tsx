@@ -294,6 +294,14 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* Recent Activity */}
+        {activeSection === "activity" && (
+          <div id="activity" className="mt-6">
+            <RecentActivity userRole={user?.role} />
+          </div>
+        )}
 
         {/* View Trainee Modal */}
         <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
@@ -373,15 +381,6 @@ export default function AdminDashboard() {
             )}
           </DialogContent>
         </Dialog>
-        </Card>
-        )}
-
-        {/* Recent Activity */}
-        {activeSection === "activity" && (
-          <div id="activity" className="mt-6">
-            <RecentActivity userRole={user?.role} />
-          </div>
-        )}
       </div>
     </div>
   );
