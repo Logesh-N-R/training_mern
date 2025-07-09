@@ -54,7 +54,7 @@ export default function SuperAdminPanel() {
 
         {/* User Tests Dashboard */}
         <div className="mt-6">
-          <UserTestsDashboard />
+          <UserTestsDashboard userRole={user?.role} />
         </div>
 
         {/* Submission Management */}

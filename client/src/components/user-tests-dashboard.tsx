@@ -36,7 +36,11 @@ interface UserStats {
   submissions: Submission[];
 }
 
-export function UserTestsDashboard() {
+interface UserTestsDashboardProps {
+  userRole?: string;
+}
+
+export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('totalTests');
   const [selectedUser, setSelectedUser] = useState<UserStats | null>(null);
@@ -47,9 +51,11 @@ export function UserTestsDashboard() {
     queryFn: () => ApiService.get('/api/submissions'),
   });
 
+  const apiEndpoint = userRole === 'superadmin' ? '/api/users' : '/api/trainees';
+  
   const { data: users = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ['/api/users'],
-    queryFn: () => ApiService.get('/api/users'),
+    queryKey: [apiEndpoint],
+    queryFn: () => ApiService.get(apiEndpoint),
   });
 
   const userStats = useMemo(() => {
