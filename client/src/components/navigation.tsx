@@ -124,28 +124,32 @@ export function Navigation() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuItem disabled>
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                      user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
+                      user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </div>
+                    <span className="text-sm">Role</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                  <DropdownMenuItem disabled>
+                    <span className="text-xs text-muted-foreground">
+                      User ID: {user.id}
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
-                    user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                    user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                  </div>
-                  <span className="text-sm">Role</span>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Reset Password</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={(e) => {
+                  e.preventDefault();
+                  logout();
+                }}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -221,6 +225,9 @@ export function Navigation() {
                   </div>
                 </div>
                 <div className="px-3 space-y-1">
+                  <div className="px-3 py-2 text-xs text-slate-600">
+                    User ID: {user.id}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -228,19 +235,11 @@ export function Navigation() {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <User className="w-4 h-4 mr-2" />
-                    Profile
+                    Reset Password
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-slate-600 hover:text-slate-900"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </Button>
-                  <Button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       logout();
                       setIsMobileMenuOpen(false);
                     }}

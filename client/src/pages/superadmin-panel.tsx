@@ -17,6 +17,13 @@ import { QAModule } from '@/components/qa-module';
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
   const [activeSection, setActiveSection] = useState("tests");
+  const [systemStats, setSystemStats] = useState({
+    totalUsers: 0,
+    totalAdmins: 0,
+    totalSuperAdmins: 0,
+    totalQuestions: 0,
+    totalSubmissions: 0
+  });
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
@@ -46,7 +53,7 @@ export default function SuperAdminPanel() {
     return null;
   }
 
-  const systemStats = useMemo(() => {
+  const systemStatsMemo = useMemo(() => {
     const totalUsers = users.length;
     const totalAdmins = users.filter((u: User) => u.role === 'admin').length;
     const totalTrainees = users.filter((u: User) => u.role === 'trainee').length;
@@ -89,7 +96,7 @@ export default function SuperAdminPanel() {
                       <ClipboardList className="text-blue-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalSubmissions}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalSubmissions}</h3>
                       <p className="text-slate-600">Total Submissions</p>
                     </div>
                   </div>
@@ -103,7 +110,7 @@ export default function SuperAdminPanel() {
                       <BarChart3 className="text-green-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.completedSubmissions}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.completedSubmissions}</h3>
                       <p className="text-slate-600">Completed Tests</p>
                     </div>
                   </div>
@@ -117,7 +124,7 @@ export default function SuperAdminPanel() {
                       <Shield className="text-purple-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.evaluatedSubmissions}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.evaluatedSubmissions}</h3>
                       <p className="text-slate-600">Evaluated Tests</p>
                     </div>
                   </div>
@@ -131,7 +138,7 @@ export default function SuperAdminPanel() {
                       <Database className="text-yellow-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalQuestions}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalQuestions}</h3>
                       <p className="text-slate-600">Total Questions</p>
                     </div>
                   </div>
@@ -180,7 +187,7 @@ export default function SuperAdminPanel() {
                       <Users className="text-blue-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalUsers}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalUsers}</h3>
                       <p className="text-slate-600">Total Users</p>
                     </div>
                   </div>
@@ -194,7 +201,7 @@ export default function SuperAdminPanel() {
                       <Users className="text-green-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalTrainees}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalTrainees}</h3>
                       <p className="text-slate-600">Trainees</p>
                     </div>
                   </div>
@@ -208,7 +215,7 @@ export default function SuperAdminPanel() {
                       <Shield className="text-purple-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalAdmins}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalAdmins}</h3>
                       <p className="text-slate-600">Admins</p>
                     </div>
                   </div>
@@ -222,7 +229,7 @@ export default function SuperAdminPanel() {
                       <Shield className="text-red-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalSuperAdmins}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalSuperAdmins}</h3>
                       <p className="text-slate-600">Super Admins</p>
                     </div>
                   </div>
