@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpen, GraduationCap } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpen, GraduationCap, BarChart3, Settings, TrendingUp } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission } from '@shared/schema';
 import * as XLSX from 'xlsx';
@@ -28,41 +28,44 @@ export default function TraineeDashboard() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
-  const { data: submissions = [], isLoading } = useQuery({
-    queryKey: ['/api/submissions/my'],
-    queryFn: () => ApiService.get('/api/submissions/my'),
+  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
   });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  if (!user || user.role !== 'trainee') {
+    return null;
+  }
+
+  const userSubmissions = submissions.filter((s: Submission) => s.userId === user.id);
+  const completedSubmissions = userSubmissions.filter((s: Submission) => s.status === 'Completed');
+  const evaluatedSubmissions = userSubmissions.filter((s: Submission) => s.evaluation);
+
+  const averageScore = evaluatedSubmissions.length > 0 
+    ? Math.round(evaluatedSubmissions.reduce((sum: number, s: Submission) => sum + (s.evaluation?.percentage || 0), 0) / evaluatedSubmissions.length)
+    : 0;
+
+  const handleViewFeedback = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setIsFeedbackModalOpen(true);
   };
 
-  const exportToExcel = () => {
-    const exportData = submissions.map((submission: Submission) => ({
-      'Date': formatDate(submission.date),
+  const exportSubmissions = () => {
+    const exportData = userSubmissions.map((submission: Submission) => ({
+      'Date': new Date(submission.submittedAt).toLocaleDateString(),
       'Session': submission.sessionTitle,
-      'Understanding': submission.overallUnderstanding,
       'Status': submission.status,
-      'Score': submission.evaluation ? `${submission.evaluation.percentage}%` : 'Not evaluated',
-      'Grade': submission.evaluation ? submission.evaluation.grade : '-',
-      'Submitted At': new Date(submission.submittedAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      'Understanding': submission.overallUnderstanding,
+      'Score': submission.evaluation?.percentage || 'Not Evaluated',
+      'Grade': submission.evaluation?.grade || 'Not Evaluated',
+      'Remarks': submission.remarks || 'None'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'My Submissions');
 
-    const fileName = `my_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `my_test_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -72,21 +75,6 @@ export default function TraineeDashboard() {
         return 'bg-green-100 text-green-800';
       case 'in progress':
         return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getUnderstandingColor = (understanding: string) => {
-    switch (understanding.toLowerCase()) {
-      case 'excellent':
-        return 'bg-green-100 text-green-800';
-      case 'good':
-        return 'bg-blue-100 text-blue-800';
-      case 'average':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'poor':
-        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -112,13 +100,6 @@ export default function TraineeDashboard() {
     }
   };
 
-  const handleViewFeedback = (submission: Submission) => {
-    setSelectedSubmission(submission);
-    setIsFeedbackModalOpen(true);
-  };
-
-  if (!user) return null;
-
   return (
     <div className="min-h-screen bg-slate-50">
       <Navigation />
@@ -126,10 +107,10 @@ export default function TraineeDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Trainee Dashboard</h2>
-          <p className="text-slate-600">Complete your daily training test</p>
+          <p className="text-slate-600">Complete your daily training test and track your progress</p>
         </div>
 
-        {/* Test Form Section */}
+        {/* Tests Module */}
         {activeSection === "test" && (
           <div id="test">
             <TestForm />
@@ -143,365 +124,283 @@ export default function TraineeDashboard() {
           </div>
         )}
 
-        {/* History Section */}
+        {/* History & Progress Module */}
         {activeSection === "history" && (
-          <Card id="history" className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Past Submissions
-              </CardTitle>
-              {submissions.length > 0 && (
-                <Button
-                  onClick={exportToExcel}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Export Excel
-                </Button>
-              )}
+          <div id="history" className="space-y-6">
+            {/* Progress Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <BookOpen className="text-blue-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{userSubmissions.length}</h3>
+                      <p className="text-slate-600">Total Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <CheckCircle className="text-green-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{completedSubmissions.length}</h3>
+                      <p className="text-slate-600">Completed</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <Star className="text-purple-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{evaluatedSubmissions.length}</h3>
+                      <p className="text-slate-600">Evaluated</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-yellow-100 rounded-full">
+                      <TrendingUp className="text-yellow-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{averageScore}%</h3>
+                      <p className="text-slate-600">Avg Score</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-slate-600">Loading submissions...</p>
-              </div>
-            ) : submissions.length === 0 ? (
-              <div className="text-center py-8">
-                <CheckCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600">No submissions yet</p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop Table View */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Session</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Date</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Understanding</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Score</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Grade</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {submissions
-                        .sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                        .map((submission: any) => (
-                        <tr key={submission._id || submission.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-2 text-slate-400" />
-                              <span className="text-slate-600">
-                                {new Date(submission.date).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className={getUnderstandingColor(submission.overallUnderstanding)}>
-                              {submission.overallUnderstanding}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            {submission.evaluation ? (
-                              <span className="font-medium text-slate-900">
-                                {submission.evaluation.totalScore}/{submission.evaluation.maxScore}
-                                <span className="text-slate-600 text-sm ml-1">
-                                  ({submission.evaluation.percentage}%)
-                                </span>
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-sm">Not evaluated</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {submission.evaluation ? (
-                              <Badge className={getGradeColor(submission.evaluation.grade)}>
-                                {submission.evaluation.grade}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-400 text-sm">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className={getStatusColor(submission.status)}>
-                              {submission.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            {submission.evaluation && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-primary hover:text-blue-700"
-                                onClick={() => handleViewFeedback(submission)}
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                View Feedback
-                              </Button>
-                            )}
-                          </td>
+
+            {/* Submission History */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    My Test History
+                  </CardTitle>
+                  <Button
+                    onClick={exportSubmissions}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export History
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingSubmissions ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-slate-600">Loading submissions...</p>
+                  </div>
+                ) : userSubmissions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-600">No test submissions yet</p>
+                    <p className="text-sm text-slate-500 mt-2">Complete your first test to see your history here</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Date</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Session</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Understanding</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Score</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Grade</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="lg:hidden space-y-4">
-                  {submissions
-                    .sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                    .map((submission: any) => (
-                    <Card key={submission._id || submission.id} className="overflow-hidden">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center flex-1 min-w-0">
-                            <div className="p-2 bg-slate-100 rounded-full mr-3 flex-shrink-0">
-                              <BookOpen className="w-4 h-4 text-slate-600" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-medium text-slate-900 truncate">{submission.sessionTitle}</h3>
-                              <div className="flex items-center mt-1">
-                                <Calendar className="w-3 h-3 mr-1 text-slate-400" />
-                                <span className="text-sm text-slate-600">
-                                  {new Date(submission.date).toLocaleDateString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          {submission.evaluation && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-primary hover:text-blue-700 p-2 flex-shrink-0"
-                              onClick={() => handleViewFeedback(submission)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 mb-1">Understanding</p>
-                            <Badge className={`text-xs ${getUnderstandingColor(submission.overallUnderstanding)}`}>
-                              {submission.overallUnderstanding}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 mb-1">Status</p>
-                            <Badge className={`text-xs ${getStatusColor(submission.status)}`}>
-                              {submission.status}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 mb-1">Score</p>
-                            {submission.evaluation ? (
-                              <div>
-                                <span className="font-medium text-slate-900 text-sm">
-                                  {submission.evaluation.totalScore}/{submission.evaluation.maxScore}
-                                </span>
-                                <span className="text-slate-600 text-xs ml-1">
-                                  ({submission.evaluation.percentage}%)
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 text-xs">Not evaluated</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 mb-1">Grade</p>
-                            {submission.evaluation ? (
-                              <Badge className={`text-xs ${getGradeColor(submission.evaluation.grade)}`}>
-                                {submission.evaluation.grade}
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {userSubmissions
+                          .sort((a: Submission, b: Submission) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                          .map((submission: Submission) => (
+                          <tr key={submission.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-slate-900">
+                              {new Date(submission.submittedAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
+                            <td className="px-4 py-3">
+                              <Badge className={getStatusColor(submission.status)}>
+                                {submission.status}
                               </Badge>
-                            ) : (
-                              <span className="text-slate-400 text-xs">-</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1 text-slate-400" />
-                            <span className="text-sm text-slate-600">
-                              Submitted {new Date(submission.submittedAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                          {submission.evaluation && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-primary hover:text-blue-700 text-xs"
-                              onClick={() => handleViewFeedback(submission)}
-                            >
-                              <Eye className="w-3 h-3 mr-1" />
-                              View Feedback
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{submission.overallUnderstanding}</td>
+                            <td className="px-4 py-3">
+                              {submission.evaluation ? (
+                                <span className="font-medium text-slate-900">
+                                  {submission.evaluation.percentage}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Pending</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {submission.evaluation ? (
+                                <Badge className={getGradeColor(submission.evaluation.grade)}>
+                                  {submission.evaluation.grade}
+                                </Badge>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {submission.evaluation ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-primary hover:text-blue-700"
+                                  onClick={() => handleViewFeedback(submission)}
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View Feedback
+                                </Button>
+                              ) : (
+                                <span className="text-slate-400 text-sm">No feedback yet</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* Export Data Section */}
-        {activeSection === "export" && (
-          <Card id="export" className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileSpreadsheet className="w-5 h-5 mr-2" />
-                Export Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileSpreadsheet className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                <p className="text-slate-600 mb-4">Export your submission history to Excel</p>
-                <Button
-                  onClick={exportToExcel}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Export to Excel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Others Module */}
+        {activeSection === "others" && (
+          <div id="others">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Settings className="w-5 h-5 mr-2" />
+                  Additional Features
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-slate-900">Profile Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2 text-slate-500" />
+                        <span className="text-slate-600">Name: {user.name}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-4 h-4 mr-2 text-slate-500">@</span>
+                        <span className="text-slate-600">Email: {user.email}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <GraduationCap className="w-4 h-4 mr-2 text-slate-500" />
+                        <span className="text-slate-600">Role: Trainee</span>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Progress Tracking Section */}
-        {activeSection === "progress" && (
-          <Card id="progress" className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Progress Tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-slate-900">Tests Completed</h4>
-                  <p className="text-2xl font-bold text-blue-600">{submissions.filter((s: any) => s.status === 'Completed').length}</p>
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-slate-900">Quick Actions</h3>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={exportSubmissions}
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                        Export All Data
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'history' } }))}
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        View Progress Report
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h4 className="font-medium text-slate-900">Average Score</h4>
-                  <p className="text-2xl font-bold text-green-600">
-                    {submissions.filter((s: any) => s.evaluation).length > 0 
-                      ? Math.round(submissions.filter((s: any) => s.evaluation).reduce((sum: number, s: any) => sum + (s.evaluation?.percentage || 0), 0) / submissions.filter((s: any) => s.evaluation).length)
-                      : 0}%
-                  </p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <h4 className="font-medium text-slate-900">Recent Activity</h4>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {submissions.length > 0 ? new Date(Math.max(...submissions.map((s: any) => new Date(s.submittedAt).getTime()))).toLocaleDateString() : 'No activity'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Feedback Modal */}
         <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
-          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <GraduationCap className="w-5 h-5 mr-2" />
-                Evaluation Feedback - {selectedSubmission?.sessionTitle}
-              </DialogTitle>
+              <DialogTitle>Detailed Feedback</DialogTitle>
             </DialogHeader>
-            {selectedSubmission?.evaluation && (
+            {selectedSubmission && selectedSubmission.evaluation && (
               <div className="space-y-6">
-                {/* Evaluation Summary */}
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-slate-900 mb-3">Overall Results</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">Final Score</label>
-                      <p className="text-2xl font-bold text-slate-900">
-                        {selectedSubmission.evaluation.totalScore}/{selectedSubmission.evaluation.maxScore}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">Percentage</label>
-                      <p className="text-2xl font-bold text-slate-900">{selectedSubmission.evaluation.percentage}%</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">Grade</label>
-                      <Badge className={`text-lg px-3 py-1 ${getGradeColor(selectedSubmission.evaluation.grade)}`}>
-                        {selectedSubmission.evaluation.grade}
-                      </Badge>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Overall Score</label>
+                    <p className="text-2xl font-bold text-slate-900">{selectedSubmission.evaluation.percentage}%</p>
                   </div>
-                  {selectedSubmission.evaluation.overallFeedback && (
-                    <div className="mt-4">
-                      <label className="text-sm font-medium text-slate-700">Instructor's Overall Feedback</label>
-                      <p className="text-slate-900 mt-1 p-3 bg-white rounded border">{selectedSubmission.evaluation.overallFeedback}</p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Grade</label>
+                    <Badge className={`text-lg px-3 py-1 ${getGradeColor(selectedSubmission.evaluation.grade)}`}>
+                      {selectedSubmission.evaluation.grade}
+                    </Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Understanding Level</label>
+                    <p className="text-lg font-medium text-slate-900">{selectedSubmission.overallUnderstanding}</p>
+                  </div>
                 </div>
 
-                {/* Question-by-Question Feedback */}
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-3">Question-by-Question Feedback</h4>
+                  <h4 className="font-medium text-slate-900 mb-3">Question-wise Feedback</h4>
                   <div className="space-y-4">
-                    {selectedSubmission.questionAnswers?.map((qa: any, index: number) => (
+                    {selectedSubmission.evaluation.questionFeedback?.map((feedback: any, index: number) => (
                       <Card key={index} className="border border-slate-200">
                         <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <p className="font-medium text-slate-700">{qa.topic}</p>
-                              <p className="text-sm text-slate-600">{qa.question}</p>
+                          <div className="flex justify-between items-start mb-2">
+                            <h5 className="font-medium text-slate-900">Question {index + 1}</h5>
+                            <div className="text-right">
+                              <span className="font-medium text-slate-900">{feedback.score}/5</span>
+                              <p className="text-sm text-slate-600">points</p>
                             </div>
-                            <Badge className={getGradeColor(qa.score && qa.score >= 8 ? 'A' : qa.score && qa.score >= 6 ? 'B' : 'C')}>
-                              {qa.score || 0}/10
-                            </Badge>
                           </div>
-
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-xs font-medium text-slate-700">Your Answer:</label>
-                              <p className="text-slate-900 mt-1 p-2 bg-slate-50 rounded">{qa.answer}</p>
-                            </div>
-
-                            {qa.feedback && (
-                              <div>
-                                <label className="text-xs font-medium text-slate-700">Instructor's Feedback:</label>
-                                <p className="text-slate-900 mt-1 p-2 bg-blue-50 rounded border-l-4 border-blue-400">{qa.feedback}</p>
-                              </div>
-                            )}
-                          </div>
+                          {feedback.feedback && (
+                            <p className="text-slate-700 text-sm mt-2">{feedback.feedback}</p>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 </div>
 
-                <div className="text-sm text-slate-600 text-center">
-                  Evaluated on {new Date(selectedSubmission.evaluation.evaluatedAt).toLocaleDateString()} 
-                  by {selectedSubmission.evaluation.evaluatedBy}
-                </div>
+                {selectedSubmission.evaluation.overallFeedback && (
+                  <div>
+                    <h4 className="font-medium text-slate-900 mb-2">Overall Feedback</h4>
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <p className="text-slate-700">{selectedSubmission.evaluation.overallFeedback}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>

@@ -17,35 +17,24 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
-          { href: "/test", label: "Take Test", icon: ClipboardList, section: "test" },
-          { href: "/test", label: "Test History", icon: Clock, section: "history" },
-          { href: "/test", label: "View Feedback", icon: MessageSquare, section: "feedback" },
+          { href: "/test", label: "Tests", icon: ClipboardList, section: "test" },
           { href: "/test", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/test", label: "Export Data", icon: FileText, section: "export" },
-          { href: "/test", label: "Progress Tracking", icon: BarChart3, section: "progress" },
+          { href: "/test", label: "History & Progress", icon: BarChart3, section: "history" },
+          { href: "/test", label: "Others", icon: Settings, section: "others" },
         ];
       case "admin":
         return [
-          { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3, section: "dashboard" },
-          { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
-          { href: "/admin/dashboard", label: "Manage Submissions", icon: CheckCircle, section: "submissions" },
-          { href: "/admin/dashboard", label: "Evaluate Tests", icon: Star, section: "evaluate" },
-          { href: "/admin/dashboard", label: "Trainee Management", icon: Users, section: "trainees" },
+          { href: "/admin/dashboard", label: "Tests", icon: ClipboardList, section: "tests" },
+          { href: "/admin/dashboard", label: "User Management", icon: Users, section: "users" },
           { href: "/admin/dashboard", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/admin/dashboard", label: "User Tests", icon: ClipboardList, section: "usertests" },
-          { href: "/admin/dashboard", label: "Recent Activity", icon: Activity, section: "activity" },
+          { href: "/admin/dashboard", label: "Others", icon: Settings, section: "others" },
         ];
       case "superadmin":
         return [
-          { href: "/superadmin", label: "Super Admin Panel", icon: Shield, section: "panel" },
+          { href: "/superadmin", label: "Tests", icon: ClipboardList, section: "tests" },
           { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
-          { href: "/superadmin", label: "Role Management", icon: UserCheck, section: "roles" },
-          { href: "/superadmin", label: "System Analytics", icon: Database, section: "analytics" },
-          { href: "/superadmin", label: "Submissions", icon: CheckCircle, section: "submissions" },
           { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/superadmin", label: "User Tests", icon: ClipboardList, section: "usertests" },
-          { href: "/superadmin", label: "Recent Activity", icon: Activity, section: "activity" },
-          { href: "/admin/dashboard", label: "Admin View", icon: Settings, section: "admin" },
+          { href: "/superadmin", label: "Others", icon: Settings, section: "others" },
         ];
       default:
         return [];
@@ -96,12 +85,12 @@ export function Navigation() {
                   <Link
                     key={`${item.href}-${index}`}
                     href={item.href}
-                    className={`text-slate-700 hover:text-primary px-2 py-2 rounded-md text-xs font-medium flex items-center transition-colors ${
+                    className={`text-slate-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
                       isActive ? "text-primary bg-blue-50 shadow-sm" : ""
                     }`}
                     onClick={() => handleNavClick(item)}
                   >
-                    <Icon className="w-3 h-3 mr-1" />
+                    <Icon className="w-4 h-4 mr-2" />
                     {item.label}
                   </Link>
                 );

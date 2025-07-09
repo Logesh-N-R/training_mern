@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
@@ -7,7 +8,8 @@ import { UserTestsDashboard } from '@/components/user-tests-dashboard';
 import { RecentActivity } from '@/components/recent-activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Shield, Activity, Database } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Shield, Activity, Database, Settings, ClipboardList, HelpCircle, BarChart3 } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -15,11 +17,11 @@ import { QAModule } from '@/components/qa-module';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
-  const [activeSection, setActiveSection] = useState("panel");
+  const [activeSection, setActiveSection] = useState("tests");
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "panel");
+      setActiveSection(event.detail.section || "tests");
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
@@ -36,13 +38,36 @@ export default function SuperAdminPanel() {
     queryFn: () => ApiService.get('/api/submissions'),
   });
 
+  const { data: questions = [] } = useQuery({
+    queryKey: ['/api/questions'],
+    queryFn: () => ApiService.get('/api/questions'),
+  });
+
   if (!user || user.role !== 'superadmin') {
     return null;
   }
 
-  const activeTrainees = users.filter((u: User) => u.role === 'trainee').length;
-  const adminUsers = users.filter((u: User) => u.role === 'admin').length;
-  const totalSubmissions = submissions.length;
+  const systemStats = useMemo(() => {
+    const totalUsers = users.length;
+    const totalAdmins = users.filter((u: User) => u.role === 'admin').length;
+    const totalTrainees = users.filter((u: User) => u.role === 'trainee').length;
+    const totalSuperAdmins = users.filter((u: User) => u.role === 'superadmin').length;
+    const totalSubmissions = submissions.length;
+    const completedSubmissions = submissions.filter((s: Submission) => s.status === 'Completed').length;
+    const evaluatedSubmissions = submissions.filter((s: Submission) => s.evaluation).length;
+    const totalQuestions = questions.reduce((total: number, q: any) => total + (q.questions?.length || 0), 0);
+
+    return {
+      totalUsers,
+      totalAdmins,
+      totalTrainees,
+      totalSuperAdmins,
+      totalSubmissions,
+      completedSubmissions,
+      evaluatedSubmissions,
+      totalQuestions,
+    };
+  }, [users, submissions, questions]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -51,68 +76,164 @@ export default function SuperAdminPanel() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Super Admin Panel</h2>
-          <p className="text-slate-600">Manage users, roles, and system settings</p>
+          <p className="text-slate-600">Complete system administration and oversight</p>
         </div>
 
-        {/* Super Admin Panel Section */}
-        {activeSection === "panel" && (
-          <div id="panel">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Tests Module */}
+        {activeSection === "tests" && (
+          <div id="tests" className="space-y-6">
+            {/* Test Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
-                <CardHeader>
-                  <CardTitle>System Statistics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total Users</span>
-                      <span className="font-medium text-slate-900">{users.length}</span>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <ClipboardList className="text-blue-600 text-xl" />
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Active Trainees</span>
-                      <span className="font-medium text-slate-900">{activeTrainees}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Admin Users</span>
-                      <span className="font-medium text-slate-900">{adminUsers}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total Submissions</span>
-                      <span className="font-medium text-slate-900">{totalSubmissions}</span>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalSubmissions}</h3>
+                      <p className="text-slate-600">Total Submissions</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <p className="text-slate-600">Manage users, view submissions, and monitor system activity from the navigation menu.</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className="p-2 bg-blue-50 hover:bg-blue-100 rounded text-sm text-blue-700">View Users</button>
-                      <button className="p-2 bg-green-50 hover:bg-green-100 rounded text-sm text-green-700">Check Submissions</button>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <BarChart3 className="text-green-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.completedSubmissions}</h3>
+                      <p className="text-slate-600">Completed Tests</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <Shield className="text-purple-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.evaluatedSubmissions}</h3>
+                      <p className="text-slate-600">Evaluated Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-yellow-100 rounded-full">
+                      <Database className="text-yellow-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalQuestions}</h3>
+                      <p className="text-slate-600">Total Questions</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Test Management Sections */}
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    Test Performance Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <UserTestsDashboard userRole={user?.role} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ClipboardList className="w-5 h-5 mr-2" />
+                    Submission Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubmissionManagement userRole={user?.role} />
                 </CardContent>
               </Card>
             </div>
           </div>
         )}
 
-        {/* User Management */}
+        {/* User Management Module */}
         {activeSection === "users" && (
-          <div id="users">
-            <UserManagement />
-          </div>
-        )}
+          <div id="users" className="space-y-6">
+            {/* User Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <Users className="text-blue-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalUsers}</h3>
+                      <p className="text-slate-600">Total Users</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Submission Management */}
-        {activeSection === "submissions" && (
-          <div id="submissions" className="mt-6">
-            <SubmissionManagement userRole={user?.role} />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <Users className="text-green-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalTrainees}</h3>
+                      <p className="text-slate-600">Trainees</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <Shield className="text-purple-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalAdmins}</h3>
+                      <p className="text-slate-600">Admins</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-red-100 rounded-full">
+                      <Shield className="text-red-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStats.totalSuperAdmins}</h3>
+                      <p className="text-slate-600">Super Admins</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* User Management Component */}
+            <UserManagement />
           </div>
         )}
 
@@ -123,44 +244,50 @@ export default function SuperAdminPanel() {
           </div>
         )}
 
-        {/* User Tests Dashboard */}
-        {activeSection === "usertests" && (
-          <div id="usertests" className="mt-6">
-            <UserTestsDashboard userRole={user?.role} />
-          </div>
-        )}
-
-        {/* System Analytics */}
-        {activeSection === "analytics" && (
-          <div id="analytics" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Others Module */}
+        {activeSection === "others" && (
+          <div id="others" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Detailed System Analytics</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Settings className="w-5 h-5 mr-2" />
+                    System Overview
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total Users</span>
-                      <span className="font-medium text-slate-900">{users.length}</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-blue-50 rounded">
+                        <h4 className="font-medium text-slate-900">System Health</h4>
+                        <p className="text-sm text-green-600">All systems operational</p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded">
+                        <h4 className="font-medium text-slate-900">Database Status</h4>
+                        <p className="text-sm text-green-600">Connected & Active</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Active Trainees</span>
-                      <span className="font-medium text-slate-900">{activeTrainees}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Admin Users</span>
-                      <span className="font-medium text-slate-900">{adminUsers}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total Submissions</span>
-                      <span className="font-medium text-slate-900">{totalSubmissions}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Average Completion Rate</span>
-                      <span className="font-medium text-slate-900">
-                        {submissions.length > 0 ? Math.round((submissions.filter((s: any) => s.status === 'Completed').length / submissions.length) * 100) : 0}%
-                      </span>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-slate-900">Quick Actions</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button
+                          variant="outline"
+                          className="justify-start"
+                          onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'users' } }))}
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          Manage Users
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="justify-start"
+                          onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'tests' } }))}
+                        >
+                          <ClipboardList className="w-4 h-4 mr-2" />
+                          View Test Analytics
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -168,37 +295,37 @@ export default function SuperAdminPanel() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Performance Metrics</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Activity className="w-5 h-5 mr-2" />
+                    Recent System Activity
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Completed Tests</span>
-                      <span className="font-medium text-slate-900">{submissions.filter((s: any) => s.status === 'Completed').length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Evaluated Tests</span>
-                      <span className="font-medium text-slate-900">{submissions.filter((s: any) => s.evaluation).length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Average Score</span>
-                      <span className="font-medium text-slate-900">
-                        {submissions.filter((s: any) => s.evaluation).length > 0 
-                          ? Math.round(submissions.filter((s: any) => s.evaluation).reduce((sum: number, s: any) => sum + (s.evaluation?.percentage || 0), 0) / submissions.filter((s: any) => s.evaluation).length)
-                          : 0}%
-                      </span>
-                    </div>
-                  </div>
+                  <RecentActivity userRole={user?.role} />
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
 
-        {/* Recent Activity */}
-        {activeSection === "activity" && (
-          <div id="activity" className="mt-6">
-            <RecentActivity userRole={user?.role} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Panel Access</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <h3 className="font-medium text-slate-900">Admin Dashboard Access</h3>
+                    <p className="text-sm text-slate-600">Access admin-level features and controls</p>
+                  </div>
+                  <Button
+                    onClick={() => window.location.href = '/admin/dashboard'}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Access Admin View
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

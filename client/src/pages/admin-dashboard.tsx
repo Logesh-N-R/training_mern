@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, ClipboardCheck, Clock, HelpCircle, Search } from 'lucide-react';
+import { Users, ClipboardCheck, Clock, HelpCircle, Search, Settings, BarChart3, Upload, CheckCircle, Activity } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
 
@@ -22,11 +23,11 @@ export default function AdminDashboard() {
   const [selectedTrainee, setSelectedTrainee] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState("tests");
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "dashboard");
+      setActiveSection(event.detail.section || "tests");
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
@@ -94,11 +95,11 @@ export default function AdminDashboard() {
           <p className="text-slate-600">Manage trainees and test questions</p>
         </div>
 
-        {/* Dashboard Section */}
-        {activeSection === "dashboard" && (
-          <div id="dashboard">
-            {/* Admin Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-6">
+        {/* Tests Module */}
+        {activeSection === "tests" && (
+          <div id="tests" className="space-y-6">
+            {/* Test Statistics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
               <Card>
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-center">
@@ -131,7 +132,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-center">
                     <div className="p-2 md:p-3 bg-purple-100 rounded-full flex-shrink-0">
-                      <Badge className="text-purple-600 w-5 h-5 md:w-6 md:h-6" />
+                      <CheckCircle className="text-purple-600 w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div className="ml-3 md:ml-4 min-w-0">
                       <h3 className="text-xl md:text-2xl font-bold text-slate-900">{evaluatedTests}</h3>
@@ -159,7 +160,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-center">
                     <div className="p-2 md:p-3 bg-indigo-100 rounded-full">
-                      <HelpCircle className="text-indigo-600 text-lg md:text-xl" />
+                      <BarChart3 className="text-indigo-600 text-lg md:text-xl" />
                     </div>
                     <div className="ml-3 md:ml-4">
                       <h3 className="text-xl md:text-2xl font-bold text-slate-900">{averagePercentage}%</h3>
@@ -169,27 +170,138 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
 
-        {/* Upload Questions Section */}
-        {activeSection === "upload" && (
-          <div id="upload">
-            <QuestionUploader />
-          </div>
-        )}
+            {/* Test Management Tabs */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Upload className="w-5 h-5 mr-2" />
+                    Upload Questions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QuestionUploader />
+                </CardContent>
+              </Card>
 
-        {/* User Tests Dashboard */}
-        {activeSection === "usertests" && (
-          <div id="usertests" className="mt-6">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Manage Submissions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubmissionManagement userRole="admin" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* User Tests Dashboard */}
             <UserTestsDashboard userRole={user?.role} />
           </div>
         )}
 
-        {/* Submission Management */}
-        {activeSection === "submissions" && (
-          <div id="submissions" className="mt-6">
-            <SubmissionManagement userRole="admin" />
+        {/* User Management Module */}
+        {activeSection === "users" && (
+          <div id="users" className="space-y-6">
+            {/* Trainee Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <Users className="w-5 h-5 mr-2" />
+                    Trainee Management
+                  </CardTitle>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search trainees..."
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingTrainees ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-slate-600">Loading trainees...</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Tests Completed</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Last Activity</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
+                          <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {trainees.map((trainee: User) => {
+                          const traineeSubmissions = submissions.filter((s: Submission) => s.userId === trainee.id);
+                          const completedCount = traineeSubmissions.filter((s: Submission) => s.status === 'Completed').length;
+                          const lastActivity = traineeSubmissions.length > 0 
+                            ? new Date(Math.max(...traineeSubmissions.map((s: Submission) => new Date(s.submittedAt).getTime())))
+                            : null;
+
+                          return (
+                            <tr key={trainee.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 text-slate-900">{trainee.name}</td>
+                              <td className="px-4 py-3 text-slate-600">{trainee.email}</td>
+                              <td className="px-4 py-3 text-slate-900">{completedCount}</td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {lastActivity ? lastActivity.toLocaleDateString() : 'No activity'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge className="bg-green-100 text-green-800">Active</Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-primary hover:text-blue-700"
+                                    onClick={() => handleViewTrainee(trainee)}
+                                  >
+                                    View
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-slate-600 hover:text-slate-800"
+                                    onClick={() => handleEditTrainee(trainee)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -200,106 +312,43 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Trainee Management */}
-        {activeSection === "trainees" && (
-          <Card id="trainees" className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Trainee Management</CardTitle>
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search trainees..."
-                    className="pl-10"
-                  />
+        {/* Others Module */}
+        {activeSection === "others" && (
+          <div id="others" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Settings className="w-5 h-5 mr-2" />
+                  System Overview & Activities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-medium text-slate-900 mb-4">Quick Statistics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
+                        <span className="text-slate-600">Total Questions</span>
+                        <span className="font-medium text-slate-900">{totalQuestions}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
+                        <span className="text-slate-600">Active Sessions</span>
+                        <span className="font-medium text-slate-900">{questions.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
+                        <span className="text-slate-600">Pending Evaluations</span>
+                        <span className="font-medium text-slate-900">{pendingTests}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-medium text-slate-900 mb-4">Recent Activity</h3>
+                    <RecentActivity userRole={user?.role} />
+                  </div>
                 </div>
-                <Select>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loadingTrainees ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-slate-600">Loading trainees...</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Tests Completed</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Last Activity</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {trainees.map((trainee: User) => {
-                      const traineeSubmissions = submissions.filter((s: Submission) => s.userId === trainee.id);
-                      const completedCount = traineeSubmissions.filter((s: Submission) => s.status === 'Completed').length;
-                      const lastActivity = traineeSubmissions.length > 0 
-                        ? new Date(Math.max(...traineeSubmissions.map((s: Submission) => new Date(s.submittedAt).getTime())))
-                        : null;
-
-                      return (
-                        <tr key={trainee.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-slate-900">{trainee.name}</td>
-                          <td className="px-4 py-3 text-slate-600">{trainee.email}</td>
-                          <td className="px-4 py-3 text-slate-900">{completedCount}</td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {lastActivity ? lastActivity.toLocaleDateString() : 'No activity'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className="bg-green-100 text-green-800">Active</Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex space-x-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-primary hover:text-blue-700"
-                                onClick={() => handleViewTrainee(trainee)}
-                              >
-                                View
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-slate-600 hover:text-slate-800"
-                                onClick={() => handleEditTrainee(trainee)}
-                              >
-                                Edit
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Recent Activity */}
-        {activeSection === "activity" && (
-          <div id="activity" className="mt-6">
-            <RecentActivity userRole={user?.role} />
+              </CardContent>
+            </Card>
           </div>
         )}
 
