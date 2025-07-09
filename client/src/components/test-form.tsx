@@ -86,11 +86,13 @@ export function TestForm() {
     return questionSets[0].id || questionSets[0]._id;
   }, [questionSets]);
 
-
   // Check if user has already submitted for today and if it's been evaluated
-  const todaySubmission = submissions.find((submission: any) =>
-    submission.date === new Date().toISOString().split('T')[0]
-  );
+  const todaySubmission = React.useMemo(() => {
+    return submissions.find((submission: any) =>
+      submission.date === new Date().toISOString().split('T')[0]
+    );
+  }, [submissions]);
+  
   const alreadySubmitted = todaySubmission && todaySubmission.evaluation;
 
   React.useEffect(() => {
