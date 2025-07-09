@@ -1,234 +1,153 @@
-
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  LogOut, 
-  Menu, 
-  X, 
-  Users, 
-  ClipboardCheck, 
-  MessageCircle, 
-  BarChart3, 
-  Clock, 
-  LayoutDashboard,
-  Settings,
-  UserCheck,
-  FileText,
-  TrendingUp,
-  Activity
-} from 'lucide-react';
-import { useLocation } from 'wouter';
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { LogOut, Users, ClipboardList, BarChart3, Menu, X } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
+  const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [location, setLocation] = useLocation();
 
   if (!user) return null;
 
-  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-  const isSuperAdmin = user.role === 'superadmin';
-
-  const menuItems = [
-    {
-      section: 'Dashboard',
-      items: [
-        { 
-          name: 'Dashboard', 
-          icon: LayoutDashboard, 
-          path: user.role === 'trainee' ? '/trainee-dashboard' : user.role === 'admin' ? '/admin-dashboard' : '/superadmin-panel',
-          roles: ['trainee', 'admin', 'superadmin'] 
-        },
-      ]
-    },
-    {
-      section: 'Training Management',
-      items: [
-        { 
-          name: 'User Management', 
-          icon: Users, 
-          path: '/user-management',
-          roles: ['admin', 'superadmin'] 
-        },
-        { 
-          name: 'Test Performance', 
-          icon: TrendingUp, 
-          path: '/test-performance',
-          roles: ['admin', 'superadmin'] 
-        },
-        { 
-          name: 'Test Submissions', 
-          icon: ClipboardCheck, 
-          path: '/test-submissions',
-          roles: ['admin', 'superadmin'] 
-        },
-        { 
-          name: 'Past Submissions', 
-          icon: Clock, 
-          path: '/past-submissions',
-          roles: ['trainee'] 
-        },
-      ]
-    },
-    {
-      section: 'Community',
-      items: [
-        { 
-          name: 'Q&A Community', 
-          icon: MessageCircle, 
-          path: '/qa-community',
-          roles: ['trainee', 'admin', 'superadmin'] 
-        },
-      ]
-    },
-    {
-      section: 'System',
-      items: [
-        { 
-          name: 'System Statistics', 
-          icon: BarChart3, 
-          path: '/system-stats',
-          roles: ['superadmin'] 
-        },
-        { 
-          name: 'Recent Activity', 
-          icon: Activity, 
-          path: '/recent-activity',
-          roles: ['admin', 'superadmin'] 
-        },
-      ]
+  const getNavItems = () => {
+    switch (user.role) {
+      case "trainee":
+        return [
+          { href: "/test", label: "Test", icon: ClipboardList },
+          //{ href: "/test/history", label: "History", icon: BarChart3 },
+        ];
+      case "admin":
+        return [
+          { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
+          //{ href: "/admin/questions", label: "Questions", icon: ClipboardList },
+          //{ href: "/admin/trainees", label: "Trainees", icon: Users },
+        ];
+      case "superadmin":
+        return [
+          { href: "/superadmin", label: "Dashboard", icon: BarChart3 },
+          {
+            href: "/admin/dashboard",
+            label: "Admin View",
+            icon: ClipboardList,
+          },
+        ];
+      default:
+        return [];
     }
-  ];
-
-  const handleNavigation = (path: string) => {
-    setLocation(path);
-    setIsMobileMenuOpen(false);
-  };
-
-  const isActiveRoute = (path: string) => {
-    if (path === '/trainee-dashboard' && location === '/') return true;
-    if (path === '/admin-dashboard' && location === '/') return true;
-    if (path === '/superadmin-panel' && location === '/') return true;
-    return location === path;
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <header className="bg-white shadow-sm border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo and Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-primary">Training App</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
+                Daily Training Test App
+              </h1>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-1">
-            {menuItems.map((section) => (
-              <div key={section.section} className="flex items-center space-x-1">
-                {section.items
-                  .filter(item => item.roles.includes(user.role))
-                  .map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Button
-                        key={item.name}
-                        variant={isActiveRoute(item.path) ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => handleNavigation(item.path)}
-                        className="flex items-center space-x-2"
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span className="hidden xl:inline">{item.name}</span>
-                      </Button>
-                    );
-                  })}
-                {section.section !== 'System' && (
-                  <div className="w-px h-6 bg-slate-200 mx-2" />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* User Menu and Mobile Toggle */}
-          <div className="flex items-center space-x-4">
-            {/* Welcome Message - Hidden on small screens */}
-            <div className="hidden md:block">
-              <span className="text-sm text-slate-600">
-                Welcome, <span className="font-medium text-slate-900">{user.name}</span>
-              </span>
-            </div>
-
-            {/* User Avatar */}
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="text-xs">
-                {user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
-              </AvatarFallback>
-            </Avatar>
-
-            {/* Logout Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="text-slate-600 hover:text-slate-900"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:ml-2 sm:inline">Logout</span>
-            </Button>
-
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 py-4">
-            <div className="space-y-4">
-              {menuItems.map((section) => {
-                const visibleItems = section.items.filter(item => item.roles.includes(user.role));
-                if (visibleItems.length === 0) return null;
-
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-baseline space-x-4">
+              {getNavItems().map((item) => {
+                const Icon = item.icon;
                 return (
-                  <div key={section.section}>
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">
-                      {section.section}
-                    </h3>
-                    <div className="space-y-1">
-                      {visibleItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Button
-                            key={item.name}
-                            variant={isActiveRoute(item.path) ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => handleNavigation(item.path)}
-                            className="w-full justify-start"
-                          >
-                            <Icon className="w-4 h-4 mr-3" />
-                            {item.name}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`text-slate-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium flex items-center ${
+                      location === item.href ? "text-primary" : ""
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    {item.label}
+                  </Link>
                 );
               })}
             </div>
           </div>
+
+          {/* Desktop User Info and Logout */}
+          <div className="hidden md:flex items-center space-x-4">
+            <span className="text-sm text-slate-600 truncate max-w-32">
+              Welcome, {user.name}
+            </span>
+            <Button
+              onClick={logout}
+              variant="outline"
+              size="sm"
+              className="bg-primary text-white hover:bg-blue-700"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-200 py-3">
+            <div className="space-y-3">
+              {getNavItems().map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                      location === item.href 
+                        ? "text-primary bg-blue-50" 
+                        : "text-slate-700 hover:text-primary hover:bg-slate-50"
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Icon className="w-4 h-4 mr-3" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <div className="border-t border-slate-200 pt-3 mt-3">
+                <div className="px-3 py-2">
+                  <span className="text-sm text-slate-600 block">
+                    Welcome, {user.name}
+                  </span>
+                </div>
+                <Button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="mx-3 bg-primary text-white hover:bg-blue-700"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 }

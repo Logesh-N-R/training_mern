@@ -160,9 +160,19 @@ export default function AdminDashboard() {
         {/* Question Upload Section */}
         <QuestionUploader />
 
-        {/* Recent Activity */}
+        {/* User Tests Dashboard */}
         <div className="mt-6">
-          <RecentActivity />
+          <UserTestsDashboard userRole={user?.role} />
+        </div>
+
+        {/* Submission Management */}
+        <div className="mt-6">
+          <SubmissionManagement userRole="admin" />
+        </div>
+
+        {/* Q&A Module */}
+        <div className="mt-6">
+          <QAModule currentUser={user} />
         </div>
 
         {/* Trainee Management */}

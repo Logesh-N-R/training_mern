@@ -1,161 +1,27 @@
-import { Router, Route, Switch, Redirect } from 'wouter';
-import { AuthProvider } from '@/context/AuthContext';
-import { useAuth } from '@/context/AuthContext';
-import Login from '@/pages/login';
-import Register from '@/pages/register';
-import AdminDashboard from '@/pages/admin-dashboard';
-import SuperAdminPanel from '@/pages/superadmin-panel';
-import TraineeDashboard from '@/pages/trainee-dashboard';
-import NotFound from '@/pages/not-found';
-import { Navigation } from '@/components/navigation';
-import { UserManagement } from '@/components/user-management';
-import { UserTestsDashboard } from '@/components/user-tests-dashboard';
-import { SubmissionManagement } from '@/components/submission-management';
-import { QAModule } from '@/components/qa-module';
-import { RecentActivity } from '@/components/recent-activity';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Clock, FileSpreadsheet } from 'lucide-react';
-import { Toaster } from '@/components/ui/toaster';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/lib/queryClient';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/context/AuthContext";
+import NotFound from "@/pages/not-found";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
+import TraineeDashboard from "@/pages/trainee-dashboard";
+import AdminDashboard from "@/pages/admin-dashboard";
+import SuperAdminPanel from "@/pages/superadmin-panel";
 
-function AppRouter() {
-  const { user } = useAuth();
-  const submissions = []; //Dummy data just to avoid error
-
-  const exportToExcel = () => {
-    //Dummy function just to avoid error
-  };
+function Router() {
   return (
     <Switch>
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Register} />
-          <Route path="/admin-dashboard">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? <AdminDashboard /> : <Redirect to="/login" />}
-          </Route>
-          <Route path="/superadmin-panel">
-            {user?.role === 'superadmin' ? <SuperAdminPanel /> : <Redirect to="/login" />}
-          </Route>
-          <Route path="/trainee-dashboard">
-            {user?.role === 'trainee' ? <TraineeDashboard /> : <Redirect to="/login" />}
-          </Route>
-
-          {/* Individual Menu Pages */}
-          <Route path="/user-management">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <UserManagement userRole={user.role} />
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/test-performance">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <UserTestsDashboard userRole={user.role} />
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/test-submissions">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <SubmissionManagement userRole={user.role === 'superadmin' ? 'superadmin' : 'admin'} />
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/past-submissions">
-            {user?.role === 'trainee' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <Card className="mt-6">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center">
-                          <Clock className="w-5 h-5 mr-2" />
-                          Past Submissions
-                        </CardTitle>
-                        {submissions?.length > 0 && (
-                          <Button
-                            onClick={exportToExcel}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <FileSpreadsheet className="w-4 h-4 mr-2" />
-                            Export Excel
-                          </Button>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {/* Past Submissions Content - Will be moved here */}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/qa-community">
-            {user ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <QAModule currentUser={user} />
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/system-stats">
-            {user?.role === 'superadmin' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    {/* System Statistics Cards */}
-                  </div>
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/recent-activity">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? (
-              <div className="min-h-screen bg-slate-50">
-                <Navigation />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <RecentActivity />
-                </div>
-              </div>
-            ) : <Redirect to="/login" />}
-          </Route>
-
-          <Route path="/">
-            {user ? (
-              user.role === 'trainee' ? <Redirect to="/trainee-dashboard" /> :
-              user.role === 'admin' ? <Redirect to="/admin-dashboard" /> :
-              user.role === 'superadmin' ? <Redirect to="/superadmin-panel" /> :
-              <NotFound />
-            ) : (
-              <Redirect to="/login" />
-            )}
-          </Route>
-          <Route component={NotFound} />
-        </Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/test" component={TraineeDashboard} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/superadmin" component={SuperAdminPanel} />
+      <Route path="/" component={Login} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
@@ -165,9 +31,7 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <Toaster />
-          <Router>
-            <AppRouter />
-          </Router>
+          <Router />
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
