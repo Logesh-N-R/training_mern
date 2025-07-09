@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Activity, Database } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
