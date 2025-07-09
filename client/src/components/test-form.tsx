@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +34,7 @@ interface TestFormProps {
   existingSubmission?: any;
 }
 
-export default function TestForm({ questionSet, onSubmit, existingSubmission }: TestFormProps) {
+export function TestForm({ questionSet, onSubmit, existingSubmission }: TestFormProps) {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [overallUnderstanding, setOverallUnderstanding] = useState('');
@@ -87,9 +86,9 @@ export default function TestForm({ questionSet, onSubmit, existingSubmission }: 
 
   const handleSubmit = async (isAutoSubmit = false) => {
     if (isSubmitting) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const questionAnswers = questionSet.questions.map((question, index) => ({
         question: question.question,
@@ -110,14 +109,14 @@ export default function TestForm({ questionSet, onSubmit, existingSubmission }: 
       };
 
       await onSubmit(submission);
-      
+
       if (!isAutoSubmit) {
         toast({
           title: "Success",
           description: "Your test has been submitted successfully!",
         });
       }
-      
+
       setIsCompleted(true);
     } catch (error) {
       console.error('Submission error:', error);
@@ -356,7 +355,7 @@ export default function TestForm({ questionSet, onSubmit, existingSubmission }: 
               </AlertDescription>
             </Alert>
           )}
-          
+
           <Button 
             onClick={() => handleSubmit()} 
             disabled={isSubmitting || isCompleted || !overallUnderstanding}
