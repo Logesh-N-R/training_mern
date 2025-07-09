@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -105,7 +104,7 @@ export function QuestionUploader() {
         title: 'Success',
         description: `Generated ${generatedQuestions.length} questions successfully`,
       });
-      
+
       // Convert AI generated questions to our format
       const newTopicSections = generatedQuestions.reduce((acc: TopicSection[], q: any) => {
         const existingTopic = acc.find(section => section.topic === q.topic);
@@ -131,7 +130,7 @@ export function QuestionUploader() {
         }
         return acc;
       }, []);
-      
+
       setTopicSections(newTopicSections);
       setShowAIGenerator(false);
       setAiPrompt('');
@@ -316,7 +315,7 @@ export function QuestionUploader() {
     }
 
     const questionTypes = ['multiple-choice', 'choose-best', 'true-false', 'text', 'fill-blank'];
-    
+
     setIsGenerating(true);
     generateQuestionsMutation.mutate({
       file: uploadedFile || undefined,
@@ -373,6 +372,9 @@ export function QuestionUploader() {
                     </div>
                   )}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                    Supports: PowerPoint (.ppt, .pptx), Word (.doc, .docx), PDF, Excel (.xlsx, .xls), Text (.txt), Images (.jpg, .png, etc.)
+                  </p>
               </div>
 
               <div>

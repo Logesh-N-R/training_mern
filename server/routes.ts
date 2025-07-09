@@ -480,10 +480,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let content = '';
       
-      // Extract content from PowerPoint if file is provided
+      // Extract content from uploaded file if provided
       if (file) {
-        // TODO: Implement actual PowerPoint content extraction
-        content = `PowerPoint content extracted from ${file.originalname}. This would contain the actual slide content, text, and structure.`;
+        try {
+          const { FileContentExtractor } = await import('./services/powerpoint-extractor');
+          if (FileContentExtractor.isValidFile(file.originalname)) {
+            content = await FileContentExtractor.extractContent(file.buffer, file.originalname);
+          } else {
+            return res.status(400).json({ message: 'Unsupported file type' });
+          }
+        } catch (error) {
+          console.error('File extraction error:', error);
+          content = `Content extraction failed for ${file.originalname}. Please try a different file format.`;
+        }
       }
 
       // Use AI service to generate questions
