@@ -1,341 +1,382 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from 'zod';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { ApiService } from '@/services/api';
-import { testFormSchema, type TestFormData } from '@shared/schema';
-import { QuestionRenderer } from '@/components/question-renderer';
-import { Clock, CheckCircle, AlertCircle, Calendar, Badge, Send } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
-export function TestForm() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+interface Question {
+  topic: string;
+  question: string;
+  type: 'text' | 'multiple-choice' | 'choose-best' | 'true-false' | 'fill-blank';
+  options?: string[];
+  correctAnswer?: string;
+}
+
+interface QuestionSet {
+  _id: string;
+  date: string;
+  sessionTitle: string;
+  questions: Question[];
+}
+
+interface TestFormProps {
+  questionSet: QuestionSet;
+  onSubmit: (submission: any) => void;
+  existingSubmission?: any;
+}
+
+export default function TestForm({ questionSet, onSubmit, existingSubmission }: TestFormProps) {
+  const { user } = useAuth();
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [overallUnderstanding, setOverallUnderstanding] = useState('');
+  const [status, setStatus] = useState('In Progress');
+  const [remarks, setRemarks] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
+  const [isCompleted, setIsCompleted] = useState(false);
 
-  const { data: questionSets, isLoading } = useQuery({
-    queryKey: ["/api/questions/today"],
-    queryFn: () => ApiService.get("/api/questions/today"),
-  });
+  // Initialize form with existing submission data if available
+  useEffect(() => {
+    if (existingSubmission) {
+      const submissionAnswers: Record<number, string> = {};
+      existingSubmission.questionAnswers?.forEach((qa: any, index: number) => {
+        submissionAnswers[index] = qa.answer;
+      });
+      setAnswers(submissionAnswers);
+      setOverallUnderstanding(existingSubmission.overallUnderstanding || '');
+      setStatus(existingSubmission.status || 'In Progress');
+      setRemarks(existingSubmission.remarks || '');
+      setIsCompleted(existingSubmission.status === 'Completed');
+    }
+  }, [existingSubmission]);
 
-  const { data: submissions = [] } = useQuery({
-    queryKey: ["/api/submissions/my"],
-    queryFn: () => ApiService.get("/api/submissions/my"),
-  });
+  // Timer effect
+  useEffect(() => {
+    if (timeRemaining > 0 && !isCompleted) {
+      const timer = setTimeout(() => {
+        setTimeRemaining(timeRemaining - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeRemaining === 0 && !isCompleted) {
+      handleAutoSubmit();
+    }
+  }, [timeRemaining, isCompleted]);
 
-  const form = useForm<TestFormData>({
-    resolver: zodResolver(testFormSchema),
-    defaultValues: {
-      questionAnswers: [],
-      overallUnderstanding: "",
-      status: "",
-      remarks: "",
-    },
-  });
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = form;
-
-  // Aggregate all questions from different question sets
-  const allQuestions = React.useMemo(() => {
-    if (!questionSets) return [];
-    return questionSets.reduce((acc: any, set: any) => {
-      return acc.concat(
-        set.questions.map((q: any) => ({
-          ...q,
-          sessionTitle: set.sessionTitle,
-        })),
-      );
-    }, []);
-  }, [questionSets]);
-
-  const sessionTitles = React.useMemo(() => {
-    if (!questionSets) return "";
-    return questionSets.map((set: any) => set.sessionTitle).join(", ");
-  }, [questionSets]);
-
-  const firstQuestionSetId = React.useMemo(() => {
-    if (!questionSets || questionSets.length === 0) return undefined;
-    return questionSets[0].id || questionSets[0]._id;
-  }, [questionSets]);
-
-  // Check if user has already submitted for today and if it's been evaluated
-  const todaySubmission = React.useMemo(() => {
-    return submissions.find(
-      (submission: any) =>
-        submission.date === new Date().toISOString().split("T")[0],
-    );
-  }, [submissions]);
-
-  const alreadySubmitted = React.useMemo(() => {
-    return todaySubmission && todaySubmission.evaluation;
-  }, [todaySubmission]);
-
-  const todayDate = React.useMemo(() => {
-    return new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  const handleAutoSubmit = useCallback(() => {
+    setStatus('Completed');
+    setIsCompleted(true);
+    handleSubmit(true);
   }, []);
 
-  const submitMutation = useMutation({
-    mutationFn: (data: TestFormData) => {
-      return ApiService.post("/api/submissions", {
-        ...data,
-        questionSetId: firstQuestionSetId,
-        date: new Date().toISOString().split("T")[0],
-        sessionTitle: sessionTitles,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Test submitted successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/submissions/my"] });
-      form.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to submit test",
-        variant: "destructive",
-      });
-    },
-  });
-
-  React.useEffect(() => {
-    if (allQuestions.length > 0) {
-      form.reset({
-        questionAnswers: allQuestions.map((q) => ({
-          topic: q.topic,
-          question: q.question,
-          answer: "",
-        })),
-        overallUnderstanding: "",
-        status: "",
-        remarks: "",
-      });
-    }
-  }, [allQuestions, form]);
-
-  const onSubmit = (data: TestFormData) => {
-    const submissionData = {
-      ...data,
-      questionAnswers: data.questionAnswers.map((qa, index) => ({
-        topic: allQuestions[index].topic,
-        question: allQuestions[index].question,
-        type: allQuestions[index].type,
-        answer: qa.answer,
-        options: allQuestions[index].options,
-        correctAnswer: allQuestions[index].correctAnswer,
-      })),
-    };
-
-    submitMutation.mutate(submissionData);
+  const handleAnswerChange = (questionIndex: number, answer: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionIndex]: answer
+    }));
   };
 
-  // All hooks are called above - now we can have conditional returns
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-slate-600">Loading today's test...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleSubmit = async (isAutoSubmit = false) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const questionAnswers = questionSet.questions.map((question, index) => ({
+        question: question.question,
+        type: question.type,
+        topic: question.topic,
+        answer: answers[index] || '',
+        options: question.options || []
+      }));
 
-  if (!questionSets || questionSets.length === 0) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600">No test available for today</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+      const submission = {
+        questionSetId: questionSet._id,
+        date: questionSet.date,
+        sessionTitle: questionSet.sessionTitle,
+        questionAnswers,
+        overallUnderstanding,
+        status: isAutoSubmit ? 'Completed' : status,
+        remarks
+      };
 
-  if (alreadySubmitted) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <Calendar className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <p className="text-slate-600">
-              You have already submitted today's test
-            </p>
-            <p className="text-sm text-slate-500 mt-2">
-              Check your submissions below for results
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+      await onSubmit(submission);
+      
+      if (!isAutoSubmit) {
+        toast({
+          title: "Success",
+          description: "Your test has been submitted successfully!",
+        });
+      }
+      
+      setIsCompleted(true);
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit test. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const renderQuestion = (question: Question, index: number) => {
+    const currentAnswer = answers[index] || '';
+
+    switch (question.type) {
+      case 'multiple-choice':
+        return (
+          <RadioGroup
+            value={currentAnswer}
+            onValueChange={(value) => handleAnswerChange(index, value)}
+            className="space-y-2"
+          >
+            {question.options?.map((option, optionIndex) => (
+              <div key={optionIndex} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
+                <Label htmlFor={`q${index}-${optionIndex}`} className="flex-1 cursor-pointer">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+
+      case 'choose-best':
+        return (
+          <RadioGroup
+            value={currentAnswer}
+            onValueChange={(value) => handleAnswerChange(index, value)}
+            className="space-y-2"
+          >
+            {question.options?.map((option, optionIndex) => (
+              <div key={optionIndex} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
+                <Label htmlFor={`q${index}-${optionIndex}`} className="flex-1 cursor-pointer">
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+
+      case 'true-false':
+        return (
+          <RadioGroup
+            value={currentAnswer}
+            onValueChange={(value) => handleAnswerChange(index, value)}
+            className="space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="True" id={`q${index}-true`} />
+              <Label htmlFor={`q${index}-true`} className="cursor-pointer">True</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="False" id={`q${index}-false`} />
+              <Label htmlFor={`q${index}-false`} className="cursor-pointer">False</Label>
+            </div>
+          </RadioGroup>
+        );
+
+      case 'fill-blank':
+      case 'text':
+        return (
+          <Textarea
+            value={currentAnswer}
+            onChange={(e) => handleAnswerChange(index, e.target.value)}
+            placeholder="Enter your answer..."
+            className="min-h-[100px] resize-none"
+          />
+        );
+
+      default:
+        return (
+          <Input
+            value={currentAnswer}
+            onChange={(e) => handleAnswerChange(index, e.target.value)}
+            placeholder="Enter your answer..."
+          />
+        );
+    }
+  };
+
+  const answeredQuestions = Object.keys(answers).filter(key => answers[parseInt(key)]?.trim()).length;
+  const totalQuestions = questionSet.questions.length;
+  const progress = (answeredQuestions / totalQuestions) * 100;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Today's Test</CardTitle>
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            <Calendar className="w-4 h-4 mr-1" />
-            {todayDate}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Group questions by topic */}
-        {React.useMemo(() => {
-          const groupedQuestions = allQuestions.reduce(
-            (acc: any, question: any, index: number) => {
-              const topic = question.topic;
-              if (!acc[topic]) {
-                acc[topic] = [];
-              }
-              acc[topic].push({ ...question, originalIndex: index });
-              return acc;
-            },
-            {},
-          );
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl text-slate-800">
+                {questionSet.sessionTitle}
+              </CardTitle>
+              <p className="text-slate-600 mt-1">
+                Date: {new Date(questionSet.date).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center space-x-2 mb-2">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600' : 'text-blue-600'}`}>
+                  {formatTime(timeRemaining)}
+                </span>
+              </div>
+              <Badge variant={isCompleted ? "default" : "secondary"}>
+                {isCompleted ? "Completed" : "In Progress"}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-          return Object.entries(groupedQuestions).map(
-            ([topic, questions]: [string, any]) => (
-              <Card key={topic} className="mb-6 border-l-4 border-l-primary">
-                <CardHeader className="pb-4">
-                  <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                    <Badge
-                      variant="outline"
-                      className="mr-2 bg-primary/10 text-primary"
-                    >
-                      {topic}
+      {/* Progress */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-slate-600">Progress</span>
+            <span className="text-sm font-medium">{answeredQuestions}/{totalQuestions} Questions</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Questions */}
+      <div className="space-y-6">
+        {questionSet.questions.map((question, index) => (
+          <Card key={index}>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Badge variant="outline">{question.topic}</Badge>
+                    <Badge variant="secondary" className="capitalize">
+                      {question.type.replace('-', ' ')}
                     </Badge>
-                    <span className="text-sm text-slate-600 ml-auto">
-                      {questions.length} question
-                      {questions.length > 1 ? "s" : ""}
-                    </span>
-                  </h3>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    {questions.map((question: any, index: number) => (
-                      <div key={index} className="border border-slate-200 rounded-lg p-6">
-                        <QuestionRenderer
-                          question={question}
-                          value={watch(`questionAnswers.${index}.answer`) || ''}
-                          onChange={(value) => setValue(`questionAnswers.${index}.answer`, value)}
-                          questionIndex={index}
-                        />
-                        {errors.questionAnswers?.[index]?.answer && (
-                          <p className="text-red-500 text-sm mt-2">
-                            {errors.questionAnswers[index]?.answer?.message}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </form>
-                </CardContent>
-              </Card>
-            ),
-          );
-        }, [allQuestions, register, setValue, errors, watch, handleSubmit, onSubmit])}
-
-        {/* Submission Form Controls */}
-        {allQuestions.length > 0 && (
-          <Card className="mt-6 bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label>Overall Understanding</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        setValue("overallUnderstanding", value)
-                      }
-                    >
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select understanding level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Excellent">Excellent</SelectItem>
-                        <SelectItem value="Good">Good</SelectItem>
-                        <SelectItem value="Average">Average</SelectItem>
-                        <SelectItem value="Poor">Poor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.overallUnderstanding && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.overallUnderstanding.message}
-                      </p>
-                    )}
                   </div>
-                  <div>
-                    <Label>Test Status</Label>
-                    <Select
-                      onValueChange={(value) => setValue("status", value)}
-                    >
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Not Started">Not Started</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.status && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.status.message}
-                      </p>
-                    )}
-                  </div>
+                  <CardTitle className="text-lg font-medium">
+                    {index + 1}. {question.question}
+                  </CardTitle>
                 </div>
-
-                <div>
-                  <Label>Additional Remarks</Label>
-                  <Textarea
-                    rows={3}
-                    placeholder="Any additional comments or questions..."
-                    className="resize-none bg-white"
-                    {...register("remarks")}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-blue-700"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {isSubmitting ? "Submitting..." : "Submit Test"}
-                  </Button>
-                </div>
-              </form>
+                {answers[index] && (
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {renderQuestion(question, index)}
             </CardContent>
           </Card>
-        )}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+
+      {/* Overall Assessment */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Overall Assessment</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="understanding">Rate your overall understanding of today's session</Label>
+            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select understanding level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Excellent">Excellent</SelectItem>
+                <SelectItem value="Good">Good</SelectItem>
+                <SelectItem value="Average">Average</SelectItem>
+                <SelectItem value="Below Average">Below Average</SelectItem>
+                <SelectItem value="Poor">Poor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select value={status} onValueChange={setStatus} disabled={isCompleted}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Not Started">Not Started</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="remarks">Additional Comments</Label>
+            <Textarea
+              id="remarks"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Any additional comments or feedback..."
+              className="min-h-[100px] resize-none"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Submit Button */}
+      <Card>
+        <CardContent className="pt-6">
+          {timeRemaining < 300 && !isCompleted && (
+            <Alert className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Warning: Less than 5 minutes remaining! Your test will auto-submit when time runs out.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <Button 
+            onClick={() => handleSubmit()} 
+            disabled={isSubmitting || isCompleted || !overallUnderstanding}
+            className="w-full"
+            size="lg"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                {isCompleted ? 'Test Completed' : 'Submit Test'}
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
