@@ -340,34 +340,37 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
               <BookOpen className="w-5 h-5 mr-2" />
               User Test Performance Dashboard
             </CardTitle>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder="Search by name or email..."
-                  className="pl-10 w-64"
+                  className="pl-10 w-full"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="totalTests">Total Tests</SelectItem>
-                  <SelectItem value="averageScore">Average Score</SelectItem>
-                  <SelectItem value="lastSubmission">Last Submission</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={exportToExcel}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Export Excel
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="totalTests">Total Tests</SelectItem>
+                    <SelectItem value="averageScore">Average Score</SelectItem>
+                    <SelectItem value="lastSubmission">Last Submission</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={exportToExcel}
+                  className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Export Excel</span>
+                  <span className="sm:hidden">Export</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -378,81 +381,150 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
               <p className="text-slate-600">No users found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">User</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Total Tests</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Completed</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Evaluated</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Avg Score</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Avg Grade</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Last Submission</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredAndSortedStats.map((userStat) => (
-                    <tr key={userStat.userId} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-slate-100 rounded-full mr-3">
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">User</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Total Tests</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Completed</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Evaluated</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Avg Score</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Avg Grade</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Last Submission</th>
+                      <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredAndSortedStats.map((userStat) => (
+                      <tr key={userStat.userId} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-slate-100 rounded-full mr-3">
+                              <User className="w-4 h-4 text-slate-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-900">{userStat.userName}</div>
+                              <div className="text-sm text-slate-600">{userStat.userEmail}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-slate-900">{userStat.totalTests}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-green-600">{userStat.completedTests}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-blue-600">{userStat.evaluatedTests}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {userStat.averageScore > 0 ? (
+                            <span className="font-medium text-slate-900">{userStat.averageScore}%</span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {userStat.averageGrade !== 'N/A' ? (
+                            <Badge className={getGradeColor(userStat.averageGrade)}>
+                              {userStat.averageGrade}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center text-slate-600">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {formatDate(userStat.lastSubmission)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:text-blue-700"
+                            onClick={() => handleViewDetails(userStat)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Details
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {filteredAndSortedStats.map((userStat) => (
+                  <Card key={userStat.userId} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="p-2 bg-slate-100 rounded-full mr-3 flex-shrink-0">
                             <User className="w-4 h-4 text-slate-600" />
                           </div>
-                          <div>
-                            <div className="font-medium text-slate-900">{userStat.userName}</div>
-                            <div className="text-sm text-slate-600">{userStat.userEmail}</div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-slate-900 truncate">{userStat.userName}</h3>
+                            <p className="text-sm text-slate-600 truncate">{userStat.userEmail}</p>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-slate-900">{userStat.totalTests}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-green-600">{userStat.completedTests}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-blue-600">{userStat.evaluatedTests}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {userStat.averageScore > 0 ? (
-                          <span className="font-medium text-slate-900">{userStat.averageScore}%</span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-blue-700 flex-shrink-0 ml-2"
+                          onClick={() => handleViewDetails(userStat)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-xs font-medium text-slate-700 mb-1">Total Tests</p>
+                          <p className="font-medium text-slate-900">{userStat.totalTests}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-700 mb-1">Completed</p>
+                          <p className="font-medium text-green-600">{userStat.completedTests}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-700 mb-1">Evaluated</p>
+                          <p className="font-medium text-blue-600">{userStat.evaluatedTests}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-700 mb-1">Avg Score</p>
+                          {userStat.averageScore > 0 ? (
+                            <p className="font-medium text-slate-900">{userStat.averageScore}%</p>
+                          ) : (
+                            <p className="text-slate-400">-</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1 text-slate-400" />
+                          <span className="text-sm text-slate-600">{formatDate(userStat.lastSubmission)}</span>
+                        </div>
                         {userStat.averageGrade !== 'N/A' ? (
                           <Badge className={getGradeColor(userStat.averageGrade)}>
                             {userStat.averageGrade}
                           </Badge>
                         ) : (
-                          <span className="text-slate-400">-</span>
+                          <span className="text-slate-400 text-sm">-</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center text-slate-600">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {formatDate(userStat.lastSubmission)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-blue-700"
-                          onClick={() => handleViewDetails(userStat)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Details
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

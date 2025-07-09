@@ -229,7 +229,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Test Submissions');
-      
+
       const fileName = `test_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
     };
@@ -242,48 +242,51 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
             <Clock className="w-5 h-5 mr-2" />
             Test Submission Management
           </CardTitle>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by name or session..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4">
+              <div className="relative flex-1 lg:max-w-sm">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by name or session..."
+                  className="pl-10 w-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="in progress">In Progress</SelectItem>
+                    <SelectItem value="not started">Not Started</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="All Dates" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    {uniqueDates.map((date) => (
+                      <SelectItem key={date} value={date}>
+                        {new Date(date).toLocaleDateString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={exportToExcel}
+                  className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Export Excel</span>
+                  <span className="sm:hidden">Export</span>
+                </Button>
+              </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="in progress">In Progress</SelectItem>
-                <SelectItem value="not started">Not Started</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Dates" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Dates</SelectItem>
-                {uniqueDates.map((date) => (
-                  <SelectItem key={date} value={date}>
-                    {new Date(date).toLocaleDateString()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={exportToExcel}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Export Excel
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent>
