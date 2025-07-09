@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,10 +13,17 @@ import { ApiService } from '@/services/api';
 import { questionFormSchema, type QuestionFormData } from '@shared/schema';
 import { Plus, Trash2, Upload, Calendar } from 'lucide-react';
 
+interface TopicSection {
+  topic: string;
+  questions: string[];
+}
+
 export function QuestionUploader() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [questions, setQuestions] = useState([{ topic: '', question: '' }]);
+  const [topicSections, setTopicSections] = useState<TopicSection[]>([
+    { topic: '', questions: [''] }
+  ]);
 
   const { data: existingQuestions = [] } = useQuery({
     queryKey: ['/api/questions'],
@@ -27,7 +35,7 @@ export function QuestionUploader() {
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
       sessionTitle: '',
-      questions: [{ topic: '', question: '' }],
+      questions: [],
     },
   });
 
@@ -41,7 +49,7 @@ export function QuestionUploader() {
         description: 'Questions uploaded successfully',
       });
       form.reset();
-      setQuestions([{ topic: '', question: '' }]);
+      setTopicSections([{ topic: '', questions: [''] }]);
       queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
     },
     onError: (error: any) => {
@@ -53,35 +61,75 @@ export function QuestionUploader() {
     },
   });
 
-  const addQuestion = () => {
-    const newQuestions = [...questions, { topic: '', question: '' }];
-    setQuestions(newQuestions);
-    setValue('questions', newQuestions);
+  const addTopicSection = () => {
+    setTopicSections([...topicSections, { topic: '', questions: [''] }]);
   };
 
-  const removeQuestion = (index: number) => {
-    if (questions.length > 1) {
-      const newQuestions = questions.filter((_, i) => i !== index);
-      setQuestions(newQuestions);
-      setValue('questions', newQuestions);
+  const removeTopicSection = (topicIndex: number) => {
+    if (topicSections.length > 1) {
+      const newSections = topicSections.filter((_, i) => i !== topicIndex);
+      setTopicSections(newSections);
+      updateFormQuestions(newSections);
     }
   };
 
-  const updateQuestion = (index: number, field: 'topic' | 'question', value: string) => {
-    const newQuestions = [...questions];
-    newQuestions[index][field] = value;
-    setQuestions(newQuestions);
-    setValue('questions', newQuestions);
+  const addQuestionToTopic = (topicIndex: number) => {
+    const newSections = [...topicSections];
+    newSections[topicIndex].questions.push('');
+    setTopicSections(newSections);
+    updateFormQuestions(newSections);
+  };
+
+  const removeQuestionFromTopic = (topicIndex: number, questionIndex: number) => {
+    const newSections = [...topicSections];
+    if (newSections[topicIndex].questions.length > 1) {
+      newSections[topicIndex].questions = newSections[topicIndex].questions.filter((_, i) => i !== questionIndex);
+      setTopicSections(newSections);
+      updateFormQuestions(newSections);
+    }
+  };
+
+  const updateTopic = (topicIndex: number, value: string) => {
+    const newSections = [...topicSections];
+    newSections[topicIndex].topic = value;
+    setTopicSections(newSections);
+    updateFormQuestions(newSections);
+  };
+
+  const updateQuestion = (topicIndex: number, questionIndex: number, value: string) => {
+    const newSections = [...topicSections];
+    newSections[topicIndex].questions[questionIndex] = value;
+    setTopicSections(newSections);
+    updateFormQuestions(newSections);
+  };
+
+  const updateFormQuestions = (sections: TopicSection[]) => {
+    const allQuestions = sections.flatMap(section =>
+      section.questions
+        .filter(q => q.trim())
+        .map(question => ({
+          topic: section.topic,
+          question: question
+        }))
+    );
+    setValue('questions', allQuestions);
   };
 
   const onSubmit = (data: QuestionFormData) => {
-    // Filter out empty questions
-    const validQuestions = data.questions.filter(q => q.topic.trim() && q.question.trim());
+    // Convert topic sections to question format
+    const allQuestions = topicSections.flatMap(section =>
+      section.questions
+        .filter(q => q.trim())
+        .map(question => ({
+          topic: section.topic.trim(),
+          question: question.trim()
+        }))
+    ).filter(q => q.topic && q.question);
 
-    if (validQuestions.length === 0) {
+    if (allQuestions.length === 0) {
       toast({
         title: 'Error',
-        description: 'Please add at least one complete question',
+        description: 'Please add at least one complete question with a topic',
         variant: 'destructive',
       });
       return;
@@ -89,7 +137,7 @@ export function QuestionUploader() {
 
     uploadMutation.mutate({
       ...data,
-      questions: validQuestions,
+      questions: allQuestions,
     });
   };
 
@@ -133,28 +181,28 @@ export function QuestionUploader() {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <Label>Questions</Label>
+              <Label>Topics & Questions</Label>
               <Button
                 type="button"
-                onClick={addQuestion}
+                onClick={addTopicSection}
                 variant="outline"
                 size="sm"
                 className="flex items-center"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add Question
+                Add Topic
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {questions?.map((question, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-3">
+            <div className="space-y-6">
+              {topicSections.map((topicSection, topicIndex) => (
+                <div key={topicIndex} className="border rounded-lg p-4 space-y-4 bg-slate-50">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-slate-700">Question {index + 1}</h4>
-                    {questions.length > 1 && (
+                    <h4 className="font-medium text-slate-700">Topic {topicIndex + 1}</h4>
+                    {topicSections.length > 1 && (
                       <Button
                         type="button"
-                        onClick={() => removeQuestion(index)}
+                        onClick={() => removeTopicSection(topicIndex)}
                         variant="ghost"
                         size="sm"
                         className="text-red-600 hover:text-red-700"
@@ -165,26 +213,61 @@ export function QuestionUploader() {
                   </div>
 
                   <div>
-                    <Label htmlFor={`topic-${index}`}>Topic</Label>
+                    <Label htmlFor={`topic-${topicIndex}`}>Topic Name</Label>
                     <Input
-                      id={`topic-${index}`}
-                      placeholder="e.g., React Hooks"
-                      value={question.topic}
-                      onChange={(e) => updateQuestion(index, 'topic', e.target.value)}
+                      id={`topic-${topicIndex}`}
+                      placeholder="e.g., React Hooks, JavaScript Fundamentals"
+                      value={topicSection.topic}
+                      onChange={(e) => updateTopic(topicIndex, e.target.value)}
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor={`question-${index}`}>Question</Label>
-                    <Textarea
-                      id={`question-${index}`}
-                      placeholder="Enter your question here..."
-                      value={question.question}
-                      onChange={(e) => updateQuestion(index, 'question', e.target.value)}
-                      className="mt-1"
-                      rows={3}
-                    />
+                    <div className="flex items-center justify-between mb-3">
+                      <Label>Questions for this Topic</Label>
+                      <Button
+                        type="button"
+                        onClick={() => addQuestionToTopic(topicIndex)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center text-xs"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Question
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {topicSection.questions.map((question, questionIndex) => (
+                        <div key={questionIndex} className="flex gap-2">
+                          <div className="flex-1">
+                            <Label htmlFor={`question-${topicIndex}-${questionIndex}`} className="text-xs">
+                              Question {questionIndex + 1}
+                            </Label>
+                            <Textarea
+                              id={`question-${topicIndex}-${questionIndex}`}
+                              placeholder="Enter your question here..."
+                              value={question}
+                              onChange={(e) => updateQuestion(topicIndex, questionIndex, e.target.value)}
+                              className="mt-1"
+                              rows={2}
+                            />
+                          </div>
+                          {topicSection.questions.length > 1 && (
+                            <Button
+                              type="button"
+                              onClick={() => removeQuestionFromTopic(topicIndex, questionIndex)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 mt-6"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
