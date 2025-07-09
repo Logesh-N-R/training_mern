@@ -26,6 +26,11 @@ export default function TraineeDashboard() {
     queryFn: () => ApiService.get('/api/submissions/my'),
   });
 
+  const { data: questionSets = [], isLoading: loadingQuestionSets } = useQuery({
+    queryKey: ['/api/questions'],
+    queryFn: () => ApiService.get('/api/questions'),
+  });
+
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
       setActiveSection(event.detail.section || "test");
@@ -119,7 +124,46 @@ export default function TraineeDashboard() {
         {/* Tests Module */}
         {activeSection === "test" && (
           <div id="test">
-            <TestForm />
+            {loadingQuestionSets ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-slate-600">Loading questions...</p>
+              </div>
+            ) : questionSets.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-600">No tests available</p>
+                  <p className="text-sm text-slate-500 mt-2">Check back later for new tests</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {questionSets.map((questionSet: any) => {
+                  const existingSubmission = userSubmissions.find(
+                    (sub: Submission) => sub.questionSetId === questionSet._id
+                  );
+                  
+                  return (
+                    <TestForm
+                      key={questionSet._id}
+                      questionSet={questionSet}
+                      existingSubmission={existingSubmission}
+                      onSubmit={async (submission) => {
+                        try {
+                          await ApiService.post('/api/submissions', submission);
+                          // Refetch submissions to update the UI
+                          window.location.reload();
+                        } catch (error) {
+                          console.error('Failed to submit test:', error);
+                          throw error;
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
