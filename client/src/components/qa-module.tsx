@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -217,7 +216,7 @@ export function QAModule({ currentUser }: QAModuleProps) {
                     <div className="flex items-center space-x-3">
                       <Avatar className="w-8 h-8">
                         <AvatarFallback className="text-xs">
-                          {question.askedBy.name.split(' ').map(n => n[0]).join('')}
+                          {question.askedBy.name ? question.askedBy.name.split(' ').map(n => n[0]).join('') : ''}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -250,7 +249,7 @@ export function QAModule({ currentUser }: QAModuleProps) {
                       {question.answers.map((answer: Answer) => {
                         const isAdminAnswer = answer.answeredBy.role === 'admin' || answer.answeredBy.role === 'superadmin';
                         const RoleIcon = getRoleIcon(answer.answeredBy.role);
-                        
+
                         return (
                           <div
                             key={answer._id}
@@ -263,7 +262,7 @@ export function QAModule({ currentUser }: QAModuleProps) {
                             <div className="flex items-center space-x-2 mb-2">
                               <Avatar className="w-6 h-6">
                                 <AvatarFallback className="text-xs">
-                                  {answer.answeredBy.name.split(' ').map(n => n[0]).join('')}
+                                  {answer.answeredBy.name ? answer.answeredBy.name.split(' ').map(n => n[0]).join('') : ''}
                                 </AvatarFallback>
                               </Avatar>
                               <span className="font-medium text-sm">{answer.answeredBy.name}</span>
