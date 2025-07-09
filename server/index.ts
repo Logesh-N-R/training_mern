@@ -58,9 +58,9 @@ app.use((req, res, next) => {
   });
 
   // Configure multer for file uploads
-  const storage = multer.memoryStorage();
+  const multerStorage = multer.memoryStorage();
   const upload = multer({ 
-    storage,
+    storage: multerStorage,
     fileFilter: (req, file, cb) => {
       if (file.mimetype.includes('presentation') || 
           file.originalname.endsWith('.ppt') || 
