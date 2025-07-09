@@ -1,4 +1,4 @@
-import { Router, Route, Switch, Navigate } from 'wouter';
+import { Router, Route, Switch, Redirect } from 'wouter';
 import { AuthProvider } from '@/context/AuthContext';
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/login';
@@ -33,13 +33,13 @@ function AppRouter() {
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
           <Route path="/admin-dashboard">
-            {user?.role === 'admin' || user?.role === 'superadmin' ? <AdminDashboard /> : <Navigate to="/login" />}
+            {user?.role === 'admin' || user?.role === 'superadmin' ? <AdminDashboard /> : <Redirect to="/login" />}
           </Route>
           <Route path="/superadmin-panel">
-            {user?.role === 'superadmin' ? <SuperAdminPanel /> : <Navigate to="/login" />}
+            {user?.role === 'superadmin' ? <SuperAdminPanel /> : <Redirect to="/login" />}
           </Route>
           <Route path="/trainee-dashboard">
-            {user?.role === 'trainee' ? <TraineeDashboard /> : <Navigate to="/login" />}
+            {user?.role === 'trainee' ? <TraineeDashboard /> : <Redirect to="/login" />}
           </Route>
 
           {/* Individual Menu Pages */}
@@ -51,7 +51,7 @@ function AppRouter() {
                   <UserManagement userRole={user.role} />
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/test-performance">
@@ -62,7 +62,7 @@ function AppRouter() {
                   <UserTestsDashboard userRole={user.role} />
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/test-submissions">
@@ -73,7 +73,7 @@ function AppRouter() {
                   <SubmissionManagement userRole={user.role === 'superadmin' ? 'superadmin' : 'admin'} />
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/past-submissions">
@@ -106,7 +106,7 @@ function AppRouter() {
                   </Card>
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/qa-community">
@@ -117,7 +117,7 @@ function AppRouter() {
                   <QAModule currentUser={user} />
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/system-stats">
@@ -130,7 +130,7 @@ function AppRouter() {
                   </div>
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/recent-activity">
@@ -141,17 +141,17 @@ function AppRouter() {
                   <RecentActivity />
                 </div>
               </div>
-            ) : <Navigate to="/login" />}
+            ) : <Redirect to="/login" />}
           </Route>
 
           <Route path="/">
             {user ? (
-              user.role === 'trainee' ? <Navigate to="/trainee-dashboard" /> :
-              user.role === 'admin' ? <Navigate to="/admin-dashboard" /> :
-              user.role === 'superadmin' ? <Navigate to="/superadmin-panel" /> :
+              user.role === 'trainee' ? <Redirect to="/trainee-dashboard" /> :
+              user.role === 'admin' ? <Redirect to="/admin-dashboard" /> :
+              user.role === 'superadmin' ? <Redirect to="/superadmin-panel" /> :
               <NotFound />
             ) : (
-              <Navigate to="/login" />
+              <Redirect to="/login" />
             )}
           </Route>
           <Route component={NotFound} />
