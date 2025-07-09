@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,16 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Plus, Trash2 } from 'lucide-react';
+import { Upload, Plus, Trash2, PlusCircle } from 'lucide-react';
 import { ApiService } from '@/services/api';
 
 const questionFormSchema = z.object({
   date: z.string().min(1, 'Date is required'),
   sessionTitle: z.string().min(1, 'Session title is required'),
-  questions: z.array(z.object({
-    topic: z.string().min(1, 'Topic is required'),
-    question: z.string().min(1, 'Question is required'),
-  })).min(1, 'At least one question is required'),
+  topics: z.array(z.object({
+    topicName: z.string().min(1, 'Topic name is required'),
+    questions: z.array(z.object({
+      question: z.string().min(1, 'Question is required'),
+    })).min(1, 'At least one question is required per topic'),
+  })).min(1, 'At least one topic is required'),
 });
 
 type QuestionFormData = z.infer<typeof questionFormSchema>;
@@ -32,15 +35,28 @@ export function QuestionUploader() {
     defaultValues: {
       date: '',
       sessionTitle: '',
-      questions: [{ topic: '', question: '' }],
+      topics: [{ topicName: '', questions: [{ question: '' }] }],
     },
   });
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
-  const questions = watch('questions');
+  const topics = watch('topics');
 
   const uploadMutation = useMutation({
-    mutationFn: (data: QuestionFormData) => ApiService.post('/api/questions', data),
+    mutationFn: (data: QuestionFormData) => {
+      // Transform data to match the expected API format
+      const transformedData = {
+        date: data.date,
+        sessionTitle: data.sessionTitle,
+        questions: data.topics.flatMap(topic => 
+          topic.questions.map(q => ({
+            topic: topic.topicName,
+            question: q.question
+          }))
+        )
+      };
+      return ApiService.post('/api/questions', transformedData);
+    },
     onSuccess: () => {
       toast({
         title: "Success",
@@ -58,15 +74,31 @@ export function QuestionUploader() {
     },
   });
 
-  const addQuestion = () => {
-    const currentQuestions = watch('questions');
-    setValue('questions', [...currentQuestions, { topic: '', question: '' }]);
+  const addTopic = () => {
+    const currentTopics = watch('topics');
+    setValue('topics', [...currentTopics, { topicName: '', questions: [{ question: '' }] }]);
   };
 
-  const removeQuestion = (index: number) => {
-    const currentQuestions = watch('questions');
-    if (currentQuestions.length > 1) {
-      setValue('questions', currentQuestions.filter((_, i) => i !== index));
+  const removeTopic = (index: number) => {
+    const currentTopics = watch('topics');
+    if (currentTopics.length > 1) {
+      setValue('topics', currentTopics.filter((_, i) => i !== index));
+    }
+  };
+
+  const addQuestion = (topicIndex: number) => {
+    const currentTopics = watch('topics');
+    const updatedTopics = [...currentTopics];
+    updatedTopics[topicIndex].questions.push({ question: '' });
+    setValue('topics', updatedTopics);
+  };
+
+  const removeQuestion = (topicIndex: number, questionIndex: number) => {
+    const currentTopics = watch('topics');
+    const updatedTopics = [...currentTopics];
+    if (updatedTopics[topicIndex].questions.length > 1) {
+      updatedTopics[topicIndex].questions.splice(questionIndex, 1);
+      setValue('topics', updatedTopics);
     }
   };
 
@@ -108,61 +140,100 @@ export function QuestionUploader() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-slate-900">Questions</h4>
+              <h4 className="font-medium text-slate-900">Topics & Questions</h4>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addQuestion}
+                onClick={addTopic}
                 className="text-primary hover:text-blue-700"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add Question
+                Add Topic
               </Button>
             </div>
 
-            {questions.map((_, index) => (
-              <Card key={index} className="border border-slate-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-700">Question {index + 1}</span>
-                    {questions.length > 1 && (
+            {topics.map((topic, topicIndex) => (
+              <Card key={topicIndex} className="border-2 border-slate-300">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold text-slate-800">Topic {topicIndex + 1}</span>
+                    {topics.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeQuestion(index)}
+                        onClick={() => removeTopic(topicIndex)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <Input
-                        placeholder="Topic (e.g., API Structure)"
-                        {...register(`questions.${index}.topic`)}
-                      />
-                      {errors.questions?.[index]?.topic && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.questions[index]?.topic?.message}
-                        </p>
-                      )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor={`topic-${topicIndex}`}>Topic Name</Label>
+                    <Input
+                      id={`topic-${topicIndex}`}
+                      placeholder="e.g., API Structure, React Hooks, etc."
+                      {...register(`topics.${topicIndex}.topicName`)}
+                    />
+                    {errors.topics?.[topicIndex]?.topicName && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.topics[topicIndex]?.topicName?.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Questions for this topic</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addQuestion(topicIndex)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <PlusCircle className="w-4 h-4 mr-1" />
+                        Add Question
+                      </Button>
                     </div>
-                    <div>
-                      <Textarea
-                        placeholder="Enter your question here..."
-                        rows={2}
-                        className="resize-none"
-                        {...register(`questions.${index}.question`)}
-                      />
-                      {errors.questions?.[index]?.question && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.questions[index]?.question?.message}
-                        </p>
-                      )}
-                    </div>
+
+                    {topic.questions.map((_, questionIndex) => (
+                      <Card key={questionIndex} className="border border-slate-200 bg-slate-50">
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-slate-600">
+                              Question {questionIndex + 1}
+                            </span>
+                            {topic.questions.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeQuestion(topicIndex, questionIndex)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <Textarea
+                            placeholder="Enter your question here..."
+                            rows={3}
+                            className="resize-none bg-white"
+                            {...register(`topics.${topicIndex}.questions.${questionIndex}.question`)}
+                          />
+                          {errors.topics?.[topicIndex]?.questions?.[questionIndex]?.question && (
+                            <p className="text-red-500 text-sm mt-1">
+                              {errors.topics[topicIndex]?.questions?.[questionIndex]?.question?.message}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
