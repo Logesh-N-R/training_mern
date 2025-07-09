@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { FileContentExtractor } from './powerpoint-extractor';
+import { PowerPointExtractor } from './powerpoint-extractor';
 import { AIPromptTemplates } from './ai-prompt-templates';
 
 interface QuestionGenerationRequest {
@@ -31,12 +31,12 @@ export class AIQuestionGenerator {
     let finalContent = content || '';
     
     // Extract content from file if provided
-    if (file && FileContentExtractor.isValidFile(file.filename)) {
+    if (file && PowerPointExtractor.isValidFile(file.filename)) {
       try {
-        const extractedContent = await FileContentExtractor.extractContent(file.buffer, file.filename);
+        const extractedContent = await PowerPointExtractor.extractContent(file.buffer, file.filename);
         finalContent = extractedContent;
       } catch (error) {
-        console.error('File extraction failed:', error);
+        console.error('PowerPoint extraction failed:', error);
         // Continue with existing content or prompt
       }
     }
@@ -176,12 +176,7 @@ export class AIQuestionGenerator {
     }
   }
 
-  static async extractContentFromFile(buffer: Buffer, filename: string): Promise<string> {
-    return FileContentExtractor.extractContent(buffer, filename);
-  }
-
-  // Legacy method for backward compatibility
   static async extractContentFromPowerPoint(buffer: Buffer): Promise<string> {
-    return FileContentExtractor.extractContent(buffer, 'presentation.pptx');
+    return PowerPointExtractor.extractContent(buffer, 'presentation.pptx');
   }
 }
