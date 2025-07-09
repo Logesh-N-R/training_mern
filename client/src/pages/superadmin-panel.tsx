@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
 import { UserManagement } from '@/components/user-management';
+import { QuestionUploader } from '@/components/question-uploader';
 import { SubmissionManagement } from '@/components/submission-management';
 import { UserTestsDashboard } from '@/components/user-tests-dashboard';
 import { RecentActivity } from '@/components/recent-activity';
@@ -249,6 +250,12 @@ export default function SuperAdminPanel() {
           </div>
         )}
 
+         {activeSection === "questionUploader" && (
+          <div id="questionUploader" className="mt-6">
+            <QuestionUploader />
+          </div>
+        )}
+
         {/* Others Module */}
         {activeSection === "others" && (
           <div id="others" className="space-y-6">
@@ -291,6 +298,14 @@ export default function SuperAdminPanel() {
                         >
                           <ClipboardList className="w-4 h-4 mr-2" />
                           View Test Analytics
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="justify-start"
+                          onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'questionUploader' } }))}
+                        >
+                          <HelpCircle className="w-4 h-4 mr-2" />
+                          Upload Questions
                         </Button>
                       </div>
                     </div>

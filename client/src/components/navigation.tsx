@@ -37,6 +37,7 @@ export function Navigation() {
       case "admin":
         return [
           { href: "/admin/dashboard", label: "Tests", icon: ClipboardList, section: "tests" },
+          { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
           { href: "/admin/dashboard", label: "User Management", icon: Users, section: "users" },
           { href: "/admin/dashboard", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/admin/dashboard", label: "Others", icon: Settings, section: "others" },
@@ -44,6 +45,7 @@ export function Navigation() {
       case "superadmin":
         return [
           { href: "/superadmin", label: "Tests", icon: ClipboardList, section: "tests" },
+          { href: "/superadmin", label: "Upload Questions", icon: Upload, section: "upload" },
           { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
           { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/superadmin", label: "Others", icon: Settings, section: "others" },

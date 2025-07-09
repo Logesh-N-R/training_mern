@@ -169,21 +169,9 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Test Management Tabs */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Upload className="w-5 h-5 mr-2" />
-                    Upload Questions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <QuestionUploader />
-                </CardContent>
-              </Card>
-
-              <Card className="lg:col-span-2">
+            {/* Test Management */}
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2" />
@@ -298,6 +286,23 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Upload Questions Module */}
+        {activeSection === "upload" && (
+          <div id="upload" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload Questions for Daily Tests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuestionUploader />
               </CardContent>
             </Card>
           </div>
