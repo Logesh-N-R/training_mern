@@ -173,8 +173,10 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
     const activeUsers = userStats.filter(s => s.totalTests > 0).length;
     const totalSubmissions = userStats.reduce((sum, s) => sum + s.totalTests, 0);
     const totalEvaluated = userStats.reduce((sum, s) => sum + s.evaluatedTests, 0);
-    const overallAverage = userStats.length > 0 
-      ? Math.round(userStats.reduce((sum, s) => sum + s.averageScore, 0) / userStats.filter(s => s.averageScore > 0).length || 0)
+    
+    const usersWithScores = userStats.filter(s => s.averageScore > 0);
+    const overallAverage = usersWithScores.length > 0 
+      ? Math.round(usersWithScores.reduce((sum, s) => sum + s.averageScore, 0) / usersWithScores.length)
       : 0;
 
     return {
