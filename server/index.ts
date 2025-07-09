@@ -9,6 +9,7 @@ import multer from "multer";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cors());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -76,10 +77,7 @@ app.use((req, res, next) => {
     }
   });
 
-  app.use(express.json());
-  app.use(express.static("dist"));
-
-  // Add multer middleware for file upload routes
+  // Add multer middleware for specific file upload routes
   app.use('/api/ai/generate-questions', upload.single('file'));
 
   // importantly only setup vite in development and after
