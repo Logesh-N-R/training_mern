@@ -26,15 +26,6 @@ export default function SuperAdminPanel() {
     totalSubmissions: 0
   });
 
-  useEffect(() => {
-    const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "tests");
-    };
-
-    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
-  }, []);
-
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['/api/users'],
     queryFn: () => ApiService.get('/api/users'),
@@ -49,6 +40,31 @@ export default function SuperAdminPanel() {
     queryKey: ['/api/questions'],
     queryFn: () => ApiService.get('/api/questions'),
   });
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "tests");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      const admins = users.filter((u: User) => u.role === 'admin');
+      const superAdmins = users.filter((u: User) => u.role === 'superadmin');
+      const totalQuestions = questions.reduce((total: number, q: any) => total + (q.questions?.length || 0), 0);
+
+      setSystemStats({
+        totalUsers: users.length,
+        totalAdmins: admins.length,
+        totalSuperAdmins: superAdmins.length,
+        totalQuestions,
+        totalSubmissions: submissions.length
+      });
+    }
+  }, [users, submissions, questions]);
 
   if (!user || user.role !== 'superadmin') {
     return null;

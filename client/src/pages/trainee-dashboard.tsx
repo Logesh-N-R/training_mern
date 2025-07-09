@@ -22,26 +22,27 @@ export default function TraineeDashboard() {
   const [activeSection, setActiveSection] = useState("test");
 
   const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
+    queryKey: ['/api/submissions/my'],
+    queryFn: () => ApiService.get('/api/submissions/my'),
+  });
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ['/api/questions/today'],
+    queryFn: () => ApiService.get('/api/questions/today'),
   });
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section);
+      setActiveSection(event.detail.section || "test");
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => {
-      window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
-    };
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
   if (!user) {
     return <div>Loading...</div>;
   }
-
-
 
   if (user.role !== 'trainee') {
     return null;
