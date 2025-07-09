@@ -60,7 +60,7 @@ export function QuestionUploader() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Questions uploaded successfully",
+        description: "Questions uploaded successfully. Other admins can also add questions for the same date.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
       form.reset();
@@ -110,6 +110,9 @@ export function QuestionUploader() {
     <Card>
       <CardHeader>
         <CardTitle>Upload New Questions</CardTitle>
+        <p className="text-sm text-slate-600">
+          Multiple admins can add questions for the same date. All questions will be included in the trainee's test.
+        </p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

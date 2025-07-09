@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,7 +34,7 @@ export function TestForm() {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: questions = [], isLoading } = useQuery({
+  const { data: questionSets, isLoading } = useQuery({
     queryKey: ['/api/questions/today'],
     queryFn: () => ApiService.get('/api/questions/today'),
   });
@@ -53,30 +54,68 @@ export function TestForm() {
     },
   });
 
-  const { handleSubmit, register, setValue, watch, formState: { errors } } = form;
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
 
-  const currentQuestion = questions[0] as Question | undefined;
-  const currentDate = new Date().toLocaleDateString('en-US', {
+  const todayDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
 
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  // Aggregate all questions from different question sets
+  const allQuestions = React.useMemo(() => {
+    if (!questionSets) return [];
+    return questionSets.reduce((acc: any, set: any) => {
+      return acc.concat(set.questions.map((q: any) => ({ ...q, sessionTitle: set.sessionTitle })));
+    }, []);
+  }, [questionSets]);
+
+  const sessionTitles = React.useMemo(() => {
+    if (!questionSets) return '';
+    return questionSets.map((set: any) => set.sessionTitle).join(', ');
+  }, [questionSets]);
+
+  const firstQuestionSetId = React.useMemo(() => {
+    if (!questionSets || questionSets.length === 0) return undefined;
+    return questionSets[0].id || questionSets[0]._id;
+  }, [questionSets]);
+
+
   // Check if user already submitted today's test
-  const todayDate = new Date().toISOString().split('T')[0];
-  const alreadySubmitted = submissions.some((submission: any) => 
-    submission.date === todayDate
+  const alreadySubmitted = submissions.some((submission: any) =>
+    submission.date === new Date().toISOString().split('T')[0]
   );
+
+  React.useEffect(() => {
+    if (allQuestions.length > 0) {
+      form.reset({
+        questionAnswers: allQuestions.map(q => ({
+          topic: q.topic,
+          question: q.question,
+          answer: ''
+        })),
+        overallUnderstanding: '',
+        status: '',
+        remarks: ''
+      });
+    }
+  }, [allQuestions, form]);
+
+
 
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
-      if (!currentQuestion) throw new Error('No questions available');
-      
       return ApiService.post('/api/submissions', {
-        questionSetId: currentQuestion.id,
-        date: currentQuestion.date,
-        sessionTitle: currentQuestion.sessionTitle,
         ...data,
+        questionSetId: firstQuestionSetId,
+        date: new Date().toISOString().split('T')[0],
+        sessionTitle: sessionTitles,
       });
     },
     onSuccess: () => {
@@ -118,7 +157,7 @@ export function TestForm() {
     );
   }
 
-  if (!currentQuestion) {
+  if (!questionSets || questionSets.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -152,7 +191,7 @@ export function TestForm() {
           <CardTitle>Today's Test</CardTitle>
           <Badge variant="secondary" className="bg-green-100 text-green-800">
             <Calendar className="w-4 h-4 mr-1" />
-            {currentDate}
+            {todayDate}
           </Badge>
         </div>
       </CardHeader>
@@ -162,7 +201,7 @@ export function TestForm() {
             <div>
               <Label>Session Title</Label>
               <Input
-                value={currentQuestion.sessionTitle}
+                value={sessionTitles}
                 className="bg-slate-50"
                 readOnly
               />
@@ -170,7 +209,7 @@ export function TestForm() {
             <div>
               <Label>Day</Label>
               <Input
-                value={new Date(currentQuestion.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                value={todayDate}
                 className="bg-slate-50"
                 readOnly
               />
@@ -178,7 +217,7 @@ export function TestForm() {
           </div>
 
           <div className="space-y-4">
-            {currentQuestion.questions.map((question, index) => (
+            {allQuestions && allQuestions.map((question, index) => (
               <Card key={index} className="border border-slate-200">
                 <CardContent className="pt-4">
                   <div className="flex items-start">

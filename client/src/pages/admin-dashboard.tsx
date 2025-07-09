@@ -52,7 +52,7 @@ export default function AdminDashboard() {
   const completedTests = submissions.filter((s: Submission) => s.status === 'Completed').length;
   const evaluatedTests = submissions.filter((s: Submission) => s.status === 'Evaluated').length;
   const pendingTests = submissions.filter((s: Submission) => s.status !== 'Completed' && s.status !== 'Evaluated').length;
-  const totalQuestions = questions.length;
+  const totalQuestions = questions.reduce((total: number, q: any) => total + (q.questions?.length || 0), 0);
   
   // Calculate average grade
   const evaluatedSubmissions = submissions.filter((s: Submission) => s.evaluation);

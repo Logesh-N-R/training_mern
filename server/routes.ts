@@ -116,12 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid request data' });
       }
       
-      // Check if questions already exist for this date
-      const existingQuestions = await storage.getQuestionsByDate(date);
-      if (existingQuestions.length > 0) {
-        return res.status(400).json({ message: 'Questions already exist for this date' });
-      }
-
+      // Allow multiple admins to add questions for the same date
+      // Each admin can contribute questions to the same day's test
       const question = await storage.createQuestion({
         date,
         sessionTitle,
