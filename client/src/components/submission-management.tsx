@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, Edit, Trash2, Search, Calendar, User, Clock, Star, GraduationCap } from 'lucide-react';
+import { Eye, Edit, Trash2, Search, Calendar, User, Clock, Star, GraduationCap, FileSpreadsheet } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission, User as UserType } from '@shared/schema';
 import { SubmissionEvaluation } from '@/components/submission-evaluation';
+import * as XLSX from 'xlsx';
 
 const updateSubmissionSchema = z.object({
   overallUnderstanding: z.string().min(1, 'Understanding level is required'),
@@ -206,6 +207,33 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       setIsEvaluationModalOpen(true);
     };
 
+    const exportToExcel = () => {
+      const exportData = filteredSubmissions.map((submission: Submission) => ({
+        'Trainee': getUserName(submission.userId),
+        'Session': submission.sessionTitle,
+        'Date': new Date(submission.date).toLocaleDateString(),
+        'Understanding': submission.overallUnderstanding,
+        'Score': submission.evaluation ? `${submission.evaluation.totalScore}/${submission.evaluation.maxScore} (${submission.evaluation.percentage}%)` : 'Not evaluated',
+        'Grade': submission.evaluation ? submission.evaluation.grade : '-',
+        'Status': submission.status,
+        'Submitted At': new Date(submission.submittedAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        'Remarks': submission.remarks || ''
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Test Submissions');
+      
+      const fileName = `test_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    };
+
   return (
     <Card>
       <CardHeader>
@@ -248,6 +276,13 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Export Excel
+            </Button>
           </div>
         </div>
       </CardHeader>

@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Shield, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User } from '@shared/schema';
+import * as XLSX from 'xlsx';
 
 const createUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -226,12 +227,41 @@ export function UserManagement() {
     }
   };
 
+  const exportToExcel = () => {
+    const exportData = users.map((user: User) => ({
+      'Name': user.name,
+      'Email': user.email,
+      'Role': user.role.charAt(0).toUpperCase() + user.role.slice(1),
+      'Created Date': new Date(user.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      'Status': 'Active'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    
+    const fileName = `users_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>User Management</CardTitle>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Export Excel
+            </Button>
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-2" />
@@ -316,6 +346,7 @@ export function UserManagement() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
 
           {/* Edit User Modal */}
           <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

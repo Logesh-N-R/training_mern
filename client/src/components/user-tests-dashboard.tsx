@@ -18,10 +18,12 @@ import {
   Award,
   Clock,
   User,
-  BookOpen
+  BookOpen,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission, User as UserType } from '@shared/schema';
+import * as XLSX from 'xlsx';
 
 interface UserStats {
   userId: string;
@@ -222,6 +224,26 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
     setIsDetailModalOpen(true);
   };
 
+  const exportToExcel = () => {
+    const exportData = filteredAndSortedStats.map(stats => ({
+      'Name': stats.userName,
+      'Email': stats.userEmail,
+      'Total Tests': stats.totalTests,
+      'Completed Tests': stats.completedTests,
+      'Evaluated Tests': stats.evaluatedTests,
+      'Average Score (%)': stats.averageScore,
+      'Average Grade': stats.averageGrade,
+      'Last Submission': formatDate(stats.lastSubmission)
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'User Test Performance');
+    
+    const fileName = `user_test_performance_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   if (loadingSubmissions || loadingUsers) {
     return (
       <Card>
@@ -339,6 +361,13 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
                   <SelectItem value="lastSubmission">Last Submission</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                onClick={exportToExcel}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </Button>
             </div>
           </div>
         </CardHeader>

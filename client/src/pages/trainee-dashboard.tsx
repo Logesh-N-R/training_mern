@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Clock, CheckCircle, Eye, GraduationCap } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, Eye, GraduationCap, FileSpreadsheet } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission } from '@shared/schema';
+import * as XLSX from 'xlsx';
 
 export default function TraineeDashboard() {
   const { user } = useAuthRedirect();
@@ -27,6 +28,31 @@ export default function TraineeDashboard() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const exportToExcel = () => {
+    const exportData = submissions.map((submission: Submission) => ({
+      'Date': formatDate(submission.date),
+      'Session': submission.sessionTitle,
+      'Understanding': submission.overallUnderstanding,
+      'Status': submission.status,
+      'Score': submission.evaluation ? `${submission.evaluation.percentage}%` : 'Not evaluated',
+      'Grade': submission.evaluation ? submission.evaluation.grade : '-',
+      'Submitted At': new Date(submission.submittedAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'My Submissions');
+    
+    const fileName = `my_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   const getStatusColor = (status: string) => {
@@ -96,10 +122,22 @@ export default function TraineeDashboard() {
         
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="w-5 h-5 mr-2" />
-              Past Submissions
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Past Submissions
+              </CardTitle>
+              {submissions.length > 0 && (
+                <Button
+                  onClick={exportToExcel}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export Excel
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (

@@ -1,10 +1,12 @@
-
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Activity, Clock, User, Calendar, FileSpreadsheet } from 'lucide-react';
 import { ApiService } from '@/services/api';
-import { User, Submission } from '@shared/schema';
+import { Submission, User as UserType } from '@shared/schema';
+import * as XLSX from 'xlsx';
 
 interface RecentActivityProps {
   userRole?: string;
@@ -12,7 +14,7 @@ interface RecentActivityProps {
 
 export function RecentActivity({ userRole }: RecentActivityProps) {
   const usersEndpoint = userRole === 'superadmin' ? '/api/users' : '/api/trainees';
-  
+
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: [usersEndpoint],
     queryFn: () => ApiService.get(usersEndpoint),
@@ -25,20 +27,20 @@ export function RecentActivity({ userRole }: RecentActivityProps) {
 
   const recentActivity = useMemo(() => {
     const activities: Array<{ description: string; timestamp: string; date: Date }> = [];
-    
+
     // Add recent user registrations
     users.forEach((user: User) => {
       if (user.createdAt) {
         const createdDate = new Date(user.createdAt);
         const now = new Date();
         const diffHours = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60));
-        
+
         if (diffHours <= 168) { // Show activity from last week
           let timeString = '';
           if (diffHours < 1) timeString = 'Less than an hour ago';
           else if (diffHours < 24) timeString = `${diffHours} hours ago`;
           else timeString = `${Math.floor(diffHours / 24)} days ago`;
-          
+
           activities.push({
             description: `New user registration: ${user.email}`,
             timestamp: timeString,
@@ -47,20 +49,20 @@ export function RecentActivity({ userRole }: RecentActivityProps) {
         }
       }
     });
-    
+
     // Add recent submissions
     submissions.forEach((submission: Submission) => {
       if (submission.submittedAt) {
         const submittedDate = new Date(submission.submittedAt);
         const now = new Date();
         const diffHours = Math.floor((now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60));
-        
+
         if (diffHours <= 168) { // Show activity from last week
           let timeString = '';
           if (diffHours < 1) timeString = 'Less than an hour ago';
           else if (diffHours < 24) timeString = `${diffHours} hours ago`;
           else timeString = `${Math.floor(diffHours / 24)} days ago`;
-          
+
           const user = users.find((u: User) => u._id === submission.userId || u.id === submission.userId);
           activities.push({
             description: `Test submitted by ${user?.email || 'Unknown user'}`,
@@ -70,13 +72,28 @@ export function RecentActivity({ userRole }: RecentActivityProps) {
         }
       }
     });
-    
+
     // Sort by date (most recent first) and take only the last 10
     return activities
       .sort((a, b) => b.date.getTime() - a.date.getTime())
       .slice(0, 10)
       .map(({ description, timestamp }) => ({ description, timestamp }));
   }, [users, submissions]);
+
+  const exportToExcel = () => {
+    const exportData = recentActivity.map((activity) => ({
+      'Description': activity.description,
+      'Timestamp': activity.timestamp
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Recent Activity');
+
+    const fileName = `recent_activity_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
 
   if (loadingUsers || loadingSubmissions) {
     return (
@@ -97,7 +114,20 @@ export function RecentActivity({ userRole }: RecentActivityProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <Activity className="w-5 h-5 mr-2" />
+            Recent Activity
+          </CardTitle>
+          <Button
+            onClick={exportToExcel}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Export Excel
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
