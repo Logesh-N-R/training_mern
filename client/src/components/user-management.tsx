@@ -238,6 +238,20 @@ export function UserManagement() {
                         <span className="text-slate-400 text-sm">Protected</span>
                       ) : (
                         <div className="flex space-x-2">
+                          {user.role !== 'superadmin' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                //setUserToPromote(user);
+                                //setIsPromoteModalOpen(true);
+                              }}
+                              className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                            >
+                              <Shield className="w-3 h-3 mr-1" />
+                              Promote
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" className="text-primary hover:text-blue-700">
                             <Edit className="w-4 h-4 mr-1" />
                             Edit

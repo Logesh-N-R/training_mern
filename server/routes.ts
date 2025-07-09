@@ -375,13 +375,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
-      // Prevent modification of superadmin
+      // Prevent modification of existing superadmin by other superadmins (except self)
       const existingUser = await storage.getUser(id);
       if (existingUser?.role === 'superadmin' && req.user!.id !== id) {
-        return res.status(403).json({ message: 'Cannot modify superadmin account' });
+        return res.status(403).json({ message: 'Cannot modify another superadmin account' });
       }
       
-      const user = await storage.updateUser(id, updates);
+      // Allow promoting users to superadmin role
+      const allowedUpdates = { ...updates };
+      if (allowedUpdates.role && !['trainee', 'admin', 'superadmin'].includes(allowedUpdates.role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+      
+      const user = await storage.updateUser(id, allowedUpdates);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
