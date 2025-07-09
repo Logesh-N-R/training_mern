@@ -107,7 +107,6 @@ export default function TraineeDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Trainee Dashboard</h2>
-          <p className="text-slate-600">Complete your daily training test and track your progress</p>
         </div>
 
         {/* Tests Module */}
