@@ -21,19 +21,25 @@ export default function TraineeDashboard() {
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "test");
+      setActiveSection(event.detail.section);
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => {
+      window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+    };
   }, []);
+
+  if (!user) {
+    return <div>Loading...</div>;
+  }
 
   const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
     queryKey: ['/api/submissions'],
     queryFn: () => ApiService.get('/api/submissions'),
   });
 
-  if (!user || user.role !== 'trainee') {
+  if (user.role !== 'trainee') {
     return null;
   }
 

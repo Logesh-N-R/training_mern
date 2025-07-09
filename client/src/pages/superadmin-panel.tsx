@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
@@ -266,7 +265,7 @@ export default function SuperAdminPanel() {
                         <p className="text-sm text-green-600">Connected & Active</p>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <h4 className="font-medium text-slate-900">Quick Actions</h4>
                       <div className="grid grid-cols-1 gap-2">
