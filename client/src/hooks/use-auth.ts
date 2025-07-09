@@ -1,9 +1,13 @@
-import { useAuth } from '@/context/AuthContext';
+
+import { useAuth as useAuthContext } from '@/context/AuthContext';
 import { useLocation } from 'wouter';
 import { useEffect } from 'react';
 
+// Re-export useAuth from context
+export const useAuth = useAuthContext;
+
 export function useAuthRedirect() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useAuthContext();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -16,7 +20,7 @@ export function useAuthRedirect() {
 }
 
 export function useRoleRedirect() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useAuthContext();
   const [, navigate] = useLocation();
 
   useEffect(() => {
