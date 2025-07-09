@@ -229,43 +229,105 @@ export default function AdminDashboard() {
                     <p className="mt-2 text-slate-600">Loading trainees...</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Tests Completed</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Last Activity</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {trainees.map((trainee: User) => {
-                          const traineeSubmissions = submissions.filter((s: Submission) => s.userId === trainee.id);
-                          const completedCount = traineeSubmissions.filter((s: Submission) => s.status === 'Completed').length;
-                          const lastActivity = traineeSubmissions.length > 0 
-                            ? new Date(Math.max(...traineeSubmissions.map((s: Submission) => new Date(s.submittedAt).getTime())))
-                            : null;
+                  <>
+                    {/* Desktop Table View */}
+                    <div className="hidden lg:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Name</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Email</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Tests Completed</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Last Activity</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {trainees.map((trainee: User) => {
+                            const traineeSubmissions = submissions.filter((s: Submission) => s.userId === trainee.id);
+                            const completedCount = traineeSubmissions.filter((s: Submission) => s.status === 'Completed').length;
+                            const lastActivity = traineeSubmissions.length > 0 
+                              ? new Date(Math.max(...traineeSubmissions.map((s: Submission) => new Date(s.submittedAt).getTime())))
+                              : null;
 
-                          return (
-                            <tr key={trainee.id} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-900">{trainee.name}</td>
-                              <td className="px-4 py-3 text-slate-600">{trainee.email}</td>
-                              <td className="px-4 py-3 text-slate-900">{completedCount}</td>
-                              <td className="px-4 py-3 text-slate-600">
-                                {lastActivity ? lastActivity.toLocaleDateString() : 'No activity'}
-                              </td>
-                              <td className="px-4 py-3">
-                                <Badge className="bg-green-100 text-green-800">Active</Badge>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex space-x-2">
+                            return (
+                              <tr key={trainee.id} className="hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-900">{trainee.name}</td>
+                                <td className="px-4 py-3 text-slate-600">{trainee.email}</td>
+                                <td className="px-4 py-3 text-slate-900">{completedCount}</td>
+                                <td className="px-4 py-3 text-slate-600">
+                                  {lastActivity ? lastActivity.toLocaleDateString() : 'No activity'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge className="bg-green-100 text-green-800">Active</Badge>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex space-x-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-primary hover:text-blue-700"
+                                      onClick={() => handleViewTrainee(trainee)}
+                                    >
+                                      View
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-slate-600 hover:text-slate-800"
+                                      onClick={() => handleEditTrainee(trainee)}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="lg:hidden space-y-4">
+                      {trainees.map((trainee: User) => {
+                        const traineeSubmissions = submissions.filter((s: Submission) => s.userId === trainee.id);
+                        const completedCount = traineeSubmissions.filter((s: Submission) => s.status === 'Completed').length;
+                        const lastActivity = traineeSubmissions.length > 0 
+                          ? new Date(Math.max(...traineeSubmissions.map((s: Submission) => new Date(s.submittedAt).getTime())))
+                          : null;
+
+                        return (
+                          <Card key={trainee.id} className="mobile-card">
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1">
+                                    <h3 className="font-medium text-slate-900">{trainee.name}</h3>
+                                    <p className="text-sm text-slate-600 break-all">{trainee.email}</p>
+                                  </div>
+                                  <Badge className="bg-green-100 text-green-800">Active</Badge>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-slate-500">Tests Completed:</span>
+                                    <p className="font-medium text-slate-900">{completedCount}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Last Activity:</span>
+                                    <p className="font-medium text-slate-900">
+                                      {lastActivity ? lastActivity.toLocaleDateString() : 'No activity'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 pt-2">
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="text-primary hover:text-blue-700"
+                                    className="text-primary hover:text-blue-700 flex-1 sm:flex-none"
                                     onClick={() => handleViewTrainee(trainee)}
                                   >
                                     View
@@ -273,19 +335,19 @@ export default function AdminDashboard() {
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="text-slate-600 hover:text-slate-800"
+                                    className="text-slate-600 hover:text-slate-800 flex-1 sm:flex-none"
                                     onClick={() => handleEditTrainee(trainee)}
                                   >
                                     Edit
                                   </Button>
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
