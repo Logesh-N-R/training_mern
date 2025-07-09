@@ -5,6 +5,7 @@ import { Navigation } from '@/components/navigation';
 import { QuestionUploader } from '@/components/question-uploader';
 import { SubmissionManagement } from '@/components/submission-management';
 import { UserTestsDashboard } from '@/components/user-tests-dashboard';
+import { RecentActivity } from '@/components/recent-activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
   const evaluatedTests = submissions.filter((s: Submission) => s.status === 'Evaluated').length;
   const pendingTests = submissions.filter((s: Submission) => s.status !== 'Completed' && s.status !== 'Evaluated').length;
   const totalQuestions = questions.reduce((total: number, q: any) => total + (q.questions?.length || 0), 0);
-  
+
   // Calculate average grade
   const evaluatedSubmissions = submissions.filter((s: Submission) => s.evaluation);
   const averagePercentage = evaluatedSubmissions.length > 0 
@@ -75,7 +76,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navigation />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Dashboard</h2>
@@ -340,6 +341,10 @@ export default function AdminDashboard() {
             )}
           </DialogContent>
         </Dialog>
+      {/* Recent Activity */}
+      <div className="mt-6">
+        <RecentActivity userRole={user?.role} />
+      </div>
       </div>
     </div>
   );

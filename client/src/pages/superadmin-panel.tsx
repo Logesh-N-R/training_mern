@@ -4,6 +4,7 @@ import { Navigation } from '@/components/navigation';
 import { UserManagement } from '@/components/user-management';
 import { SubmissionManagement } from '@/components/submission-management';
 import { UserTestsDashboard } from '@/components/user-tests-dashboard';
+import { RecentActivity } from '@/components/recent-activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Activity, Database } from 'lucide-react';
@@ -31,62 +32,6 @@ export default function SuperAdminPanel() {
   const activeTrainees = users.filter((u: User) => u.role === 'trainee').length;
   const adminUsers = users.filter((u: User) => u.role === 'admin').length;
   const totalSubmissions = submissions.length;
-
-  // Calculate recent activity from real data
-  const recentActivity = useMemo(() => {
-    const activities: Array<{ description: string; timestamp: string; date: Date }> = [];
-    
-    // Add recent user registrations
-    users.forEach((user: User) => {
-      if (user.createdAt) {
-        const createdDate = new Date(user.createdAt);
-        const now = new Date();
-        const diffHours = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60));
-        
-        if (diffHours <= 168) { // Show activity from last week
-          let timeString = '';
-          if (diffHours < 1) timeString = 'Less than an hour ago';
-          else if (diffHours < 24) timeString = `${diffHours} hours ago`;
-          else timeString = `${Math.floor(diffHours / 24)} days ago`;
-          
-          activities.push({
-            description: `New user registration: ${user.email}`,
-            timestamp: timeString,
-            date: createdDate
-          });
-        }
-      }
-    });
-    
-    // Add recent submissions
-    submissions.forEach((submission: Submission) => {
-      if (submission.submittedAt) {
-        const submittedDate = new Date(submission.submittedAt);
-        const now = new Date();
-        const diffHours = Math.floor((now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60));
-        
-        if (diffHours <= 168) { // Show activity from last week
-          let timeString = '';
-          if (diffHours < 1) timeString = 'Less than an hour ago';
-          else if (diffHours < 24) timeString = `${diffHours} hours ago`;
-          else timeString = `${Math.floor(diffHours / 24)} days ago`;
-          
-          const user = users.find((u: User) => u._id === submission.userId || u.id === submission.userId);
-          activities.push({
-            description: `Test submitted by ${user?.email || 'Unknown user'}`,
-            timestamp: timeString,
-            date: submittedDate
-          });
-        }
-      }
-    });
-    
-    // Sort by date (most recent first) and take only the last 10
-    return activities
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-      .slice(0, 10)
-      .map(({ description, timestamp }) => ({ description, timestamp }));
-  }, [users, submissions]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -139,31 +84,7 @@ export default function SuperAdminPanel() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Activity className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-slate-500 text-sm">No recent activity</p>
-                  </div>
-                ) : (
-                  recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-primary rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-700">{activity.description}</p>
-                        <p className="text-xs text-slate-500">{activity.timestamp}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <RecentActivity userRole={user?.role} />
         </div>
       </div>
     </div>
