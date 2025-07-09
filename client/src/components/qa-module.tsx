@@ -221,7 +221,7 @@ export function QAModule({ currentUser }: QAModuleProps) {
                       </Avatar>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium text-sm">{question.askedBy.name}</span>
+                          <span className="font-medium text-sm">{question.askedBy.name || 'Anonymous'}</span>
                           <Badge className={getRoleColor(question.askedBy.role)}>
                             {question.askedBy.role}
                           </Badge>
@@ -265,7 +265,7 @@ export function QAModule({ currentUser }: QAModuleProps) {
                                   {answer.answeredBy.name ? answer.answeredBy.name.split(' ').map(n => n[0]).join('') : ''}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="font-medium text-sm">{answer.answeredBy.name}</span>
+                              <span className="font-medium text-sm">{answer.answeredBy.name || 'Anonymous'}</span>
                               <Badge className={getRoleColor(answer.answeredBy.role)}>
                                 <RoleIcon className="w-3 h-3 mr-1" />
                                 {answer.answeredBy.role}
