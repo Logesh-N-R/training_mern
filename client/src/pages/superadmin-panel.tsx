@@ -17,12 +17,20 @@ import { QAModule } from '@/components/qa-module';
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
   const [activeSection, setActiveSection] = useState("tests");
-  const [systemStats, setSystemStats] = useState({
-    totalUsers: 0,
-    totalAdmins: 0,
-    totalSuperAdmins: 0,
-    totalQuestions: 0,
-    totalSubmissions: 0
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: () => ApiService.get('/api/users'),
+  });
+
+  const { data: submissions = [] } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
+  });
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ['/api/questions'],
+    queryFn: () => ApiService.get('/api/questions'),
   });
 
   useEffect(() => {
@@ -34,24 +42,17 @@ export default function SuperAdminPanel() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
-  const { data: users = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ['/api/users'],
-    queryFn: () => ApiService.get('/api/users'),
-  });
-
-  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
-  });
-
-  const { data: questions = [] } = useQuery({
-    queryKey: ['/api/questions'],
-    queryFn: () => ApiService.get('/api/questions'),
-  });
-
   if (!user || user.role !== 'superadmin') {
     return null;
   }
+
+  const [systemStats, setSystemStats] = useState({
+    totalUsers: 0,
+    totalAdmins: 0,
+    totalSuperAdmins: 0,
+    totalQuestions: 0,
+    totalSubmissions: 0
+  });
 
   const systemStatsMemo = useMemo(() => {
     const totalUsers = users.length;

@@ -19,6 +19,11 @@ export default function TraineeDashboard() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
 
+  const { data: submissions = [] } = useQuery({
+    queryKey: ['/api/submissions'],
+    queryFn: () => ApiService.get('/api/submissions'),
+  });
+
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
       setActiveSection(event.detail.section);
@@ -33,11 +38,6 @@ export default function TraineeDashboard() {
   if (!user) {
     return <div>Loading...</div>;
   }
-
-  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions'],
-    queryFn: () => ApiService.get('/api/submissions'),
-  });
 
   if (user.role !== 'trainee') {
     return null;
@@ -105,6 +105,10 @@ export default function TraineeDashboard() {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+    const completedTests = userSubmissions.filter((s: Submission) => s.status === 'Completed').length;
+    const pendingTests = userSubmissions.filter((s: Submission) => s.status !== 'Completed').length;
+
 
   return (
     <div className="min-h-screen bg-slate-50">

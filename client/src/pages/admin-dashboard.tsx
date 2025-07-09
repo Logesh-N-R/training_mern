@@ -19,19 +19,10 @@ import { User, Submission } from '@shared/schema';
 
 export default function AdminDashboard() {
   const { user } = useAuthRedirect();
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [selectedTrainee, setSelectedTrainee] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("tests");
-
-  useEffect(() => {
-    const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "tests");
-    };
-
-    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
-  }, []);
 
   const { data: trainees = [], isLoading: loadingTrainees } = useQuery({
     queryKey: ['/api/trainees'],
@@ -47,6 +38,15 @@ export default function AdminDashboard() {
     queryKey: ['/api/questions'],
     queryFn: () => ApiService.get('/api/questions'),
   });
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "tests");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
 
   const handleViewTrainee = (trainee: User) => {
     setSelectedTrainee(trainee);
