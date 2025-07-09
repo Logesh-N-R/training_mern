@@ -35,7 +35,7 @@ export default function TraineeDashboard() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
-  // Move conditional returns after all hooks
+  // All hooks must be called before any conditional returns
   if (!user) {
     return <div>Loading...</div>;
   }

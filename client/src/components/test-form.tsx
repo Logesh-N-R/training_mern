@@ -164,7 +164,7 @@ export function TestForm() {
     }
   };
 
-  // All hooks must be called before any conditional returns
+  // All hooks are called above - now we can have conditional returns
   if (isLoading) {
     return (
       <Card>
