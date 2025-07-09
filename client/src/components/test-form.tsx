@@ -1,29 +1,37 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Calendar, Send, Save } from 'lucide-react';
-import { ApiService } from '@/services/api';
-import { Question } from '@shared/schema';
+import React from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar, Send, Save, GraduationCap } from "lucide-react";
+import { ApiService } from "@/services/api";
+import { Question } from "@shared/schema";
 
 const testFormSchema = z.object({
-  questionAnswers: z.array(z.object({
-    topic: z.string(),
-    question: z.string(),
-    answer: z.string().min(1, 'Answer is required'),
-  })),
-  overallUnderstanding: z.string().min(1, 'Please select understanding level'),
-  status: z.string().min(1, 'Please select status'),
+  questionAnswers: z.array(
+    z.object({
+      topic: z.string(),
+      question: z.string(),
+      answer: z.string().min(1, "Answer is required"),
+    }),
+  ),
+  overallUnderstanding: z.string().min(1, "Please select understanding level"),
+  status: z.string().min(1, "Please select status"),
   remarks: z.string().optional(),
 });
 
@@ -35,38 +43,49 @@ export function TestForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: questionSets, isLoading } = useQuery({
-    queryKey: ['/api/questions/today'],
-    queryFn: () => ApiService.get('/api/questions/today'),
+    queryKey: ["/api/questions/today"],
+    queryFn: () => ApiService.get("/api/questions/today"),
   });
 
   const { data: submissions = [] } = useQuery({
-    queryKey: ['/api/submissions/my'],
-    queryFn: () => ApiService.get('/api/submissions/my'),
+    queryKey: ["/api/submissions/my"],
+    queryFn: () => ApiService.get("/api/submissions/my"),
   });
 
   const form = useForm<TestFormData>({
     resolver: zodResolver(testFormSchema),
     defaultValues: {
       questionAnswers: [],
-      overallUnderstanding: '',
-      status: '',
-      remarks: '',
+      overallUnderstanding: "",
+      status: "",
+      remarks: "",
     },
   });
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
 
   // Aggregate all questions from different question sets
   const allQuestions = React.useMemo(() => {
     if (!questionSets) return [];
     return questionSets.reduce((acc: any, set: any) => {
-      return acc.concat(set.questions.map((q: any) => ({ ...q, sessionTitle: set.sessionTitle })));
+      return acc.concat(
+        set.questions.map((q: any) => ({
+          ...q,
+          sessionTitle: set.sessionTitle,
+        })),
+      );
     }, []);
   }, [questionSets]);
 
   const sessionTitles = React.useMemo(() => {
-    if (!questionSets) return '';
-    return questionSets.map((set: any) => set.sessionTitle).join(', ');
+    if (!questionSets) return "";
+    return questionSets.map((set: any) => set.sessionTitle).join(", ");
   }, [questionSets]);
 
   const firstQuestionSetId = React.useMemo(() => {
@@ -76,29 +95,30 @@ export function TestForm() {
 
   // Check if user has already submitted for today and if it's been evaluated
   const todaySubmission = React.useMemo(() => {
-    return submissions.find((submission: any) =>
-      submission.date === new Date().toISOString().split('T')[0]
+    return submissions.find(
+      (submission: any) =>
+        submission.date === new Date().toISOString().split("T")[0],
     );
   }, [submissions]);
-  
+
   const alreadySubmitted = React.useMemo(() => {
     return todaySubmission && todaySubmission.evaluation;
   }, [todaySubmission]);
 
   const todayDate = React.useMemo(() => {
-    return new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   }, []);
 
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
-      return ApiService.post('/api/submissions', {
+      return ApiService.post("/api/submissions", {
         ...data,
         questionSetId: firstQuestionSetId,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split("T")[0],
         sessionTitle: sessionTitles,
       });
     },
@@ -107,13 +127,14 @@ export function TestForm() {
         title: "Success",
         description: "Test submitted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/submissions/my'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/submissions/my"] });
       form.reset();
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit test",
+        description:
+          error instanceof Error ? error.message : "Failed to submit test",
         variant: "destructive",
       });
     },
@@ -122,14 +143,14 @@ export function TestForm() {
   React.useEffect(() => {
     if (allQuestions.length > 0) {
       form.reset({
-        questionAnswers: allQuestions.map(q => ({
+        questionAnswers: allQuestions.map((q) => ({
           topic: q.topic,
           question: q.question,
-          answer: ''
+          answer: "",
         })),
-        overallUnderstanding: '',
-        status: '',
-        remarks: ''
+        overallUnderstanding: "",
+        status: "",
+        remarks: "",
       });
     }
   }, [allQuestions, form]);
@@ -175,8 +196,12 @@ export function TestForm() {
         <CardContent className="pt-6">
           <div className="text-center py-8">
             <Calendar className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <p className="text-slate-600">You have already submitted today's test</p>
-            <p className="text-sm text-slate-500 mt-2">Check your submissions below for results</p>
+            <p className="text-slate-600">
+              You have already submitted today's test
+            </p>
+            <p className="text-sm text-slate-500 mt-2">
+              Check your submissions below for results
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -197,63 +222,89 @@ export function TestForm() {
       <CardContent>
         {/* Group questions by topic */}
         {React.useMemo(() => {
-          const groupedQuestions = allQuestions.reduce((acc: any, question: any, index: number) => {
-            const topic = question.topic;
-            if (!acc[topic]) {
-              acc[topic] = [];
-            }
-            acc[topic].push({ ...question, originalIndex: index });
-            return acc;
-          }, {});
+          const groupedQuestions = allQuestions.reduce(
+            (acc: any, question: any, index: number) => {
+              const topic = question.topic;
+              if (!acc[topic]) {
+                acc[topic] = [];
+              }
+              acc[topic].push({ ...question, originalIndex: index });
+              return acc;
+            },
+            {},
+          );
 
-          return Object.entries(groupedQuestions).map(([topic, questions]: [string, any]) => (
-            <Card key={topic} className="mb-6 border-l-4 border-l-primary">
-              <CardHeader className="pb-4">
-                <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                  <Badge variant="outline" className="mr-2 bg-primary/10 text-primary">
-                    {topic}
-                  </Badge>
-                  <span className="text-sm text-slate-600 ml-auto">
-                    {questions.length} question{questions.length > 1 ? 's' : ''}
-                  </span>
-                </h3>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  {questions.map((question: any, questionIndex: number) => (
-                    <div key={question.originalIndex} className="p-4 bg-slate-50 rounded-lg border">
-                      <div className="flex items-start mb-3">
-                        <Badge variant="secondary" className="mr-3 mt-1 bg-slate-200 text-slate-700">
-                          Q{questionIndex + 1}
-                        </Badge>
-                        <div className="flex-1">
-                          <p className="text-slate-900 font-medium mb-3">{question.question}</p>
-                          <Textarea
-                            rows={4}
-                            placeholder="Enter your answer here..."
-                            className="resize-none bg-white border-slate-300 focus:border-primary"
-                            {...register(`questionAnswers.${question.originalIndex}.answer`)}
-                            onChange={(e) => {
-                              setValue(`questionAnswers.${question.originalIndex}`, {
-                                topic: question.topic,
-                                question: question.question,
-                                answer: e.target.value,
-                              });
-                            }}
-                          />
-                          {errors.questionAnswers?.[question.originalIndex]?.answer && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.questionAnswers[question.originalIndex]?.answer?.message}
+          return Object.entries(groupedQuestions).map(
+            ([topic, questions]: [string, any]) => (
+              <Card key={topic} className="mb-6 border-l-4 border-l-primary">
+                <CardHeader className="pb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                    <Badge
+                      variant="outline"
+                      className="mr-2 bg-primary/10 text-primary"
+                    >
+                      {topic}
+                    </Badge>
+                    <span className="text-sm text-slate-600 ml-auto">
+                      {questions.length} question
+                      {questions.length > 1 ? "s" : ""}
+                    </span>
+                  </h3>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    {questions.map((question: any, questionIndex: number) => (
+                      <div
+                        key={question.originalIndex}
+                        className="p-4 bg-slate-50 rounded-lg border"
+                      >
+                        <div className="flex items-start mb-3">
+                          <Badge
+                            variant="secondary"
+                            className="mr-3 mt-1 bg-slate-200 text-slate-700"
+                          >
+                            Q{questionIndex + 1}
+                          </Badge>
+                          <div className="flex-1">
+                            <p className="text-slate-900 font-medium mb-3">
+                              {question.question}
                             </p>
-                          )}
+                            <Textarea
+                              rows={4}
+                              placeholder="Enter your answer here..."
+                              className="resize-none bg-white border-slate-300 focus:border-primary"
+                              {...register(
+                                `questionAnswers.${question.originalIndex}.answer`,
+                              )}
+                              onChange={(e) => {
+                                setValue(
+                                  `questionAnswers.${question.originalIndex}`,
+                                  {
+                                    topic: question.topic,
+                                    question: question.question,
+                                    answer: e.target.value,
+                                  },
+                                );
+                              }}
+                            />
+                            {errors.questionAnswers?.[question.originalIndex]
+                              ?.answer && (
+                              <p className="text-red-500 text-sm mt-1">
+                                {
+                                  errors.questionAnswers[question.originalIndex]
+                                    ?.answer?.message
+                                }
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </form>
-              </CardContent>
-            </Card>
-          ));
+                    ))}
+                  </form>
+                </CardContent>
+              </Card>
+            ),
+          );
         }, [allQuestions, register, setValue, errors])}
 
         {/* Submission Form Controls */}
@@ -264,7 +315,11 @@ export function TestForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label>Overall Understanding</Label>
-                    <Select onValueChange={(value) => setValue('overallUnderstanding', value)}>
+                    <Select
+                      onValueChange={(value) =>
+                        setValue("overallUnderstanding", value)
+                      }
+                    >
                       <SelectTrigger className="bg-white">
                         <SelectValue placeholder="Select understanding level" />
                       </SelectTrigger>
@@ -276,12 +331,16 @@ export function TestForm() {
                       </SelectContent>
                     </Select>
                     {errors.overallUnderstanding && (
-                      <p className="text-red-500 text-sm mt-1">{errors.overallUnderstanding.message}</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.overallUnderstanding.message}
+                      </p>
                     )}
                   </div>
                   <div>
                     <Label>Test Status</Label>
-                    <Select onValueChange={(value) => setValue('status', value)}>
+                    <Select
+                      onValueChange={(value) => setValue("status", value)}
+                    >
                       <SelectTrigger className="bg-white">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -292,7 +351,9 @@ export function TestForm() {
                       </SelectContent>
                     </Select>
                     {errors.status && (
-                      <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.status.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -303,7 +364,7 @@ export function TestForm() {
                     rows={3}
                     placeholder="Any additional comments or questions..."
                     className="resize-none bg-white"
-                    {...register('remarks')}
+                    {...register("remarks")}
                   />
                 </div>
 
@@ -314,7 +375,7 @@ export function TestForm() {
                     className="bg-primary hover:bg-blue-700"
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {isSubmitting ? 'Submitting...' : 'Submit Test'}
+                    {isSubmitting ? "Submitting..." : "Submit Test"}
                   </Button>
                 </div>
               </form>
