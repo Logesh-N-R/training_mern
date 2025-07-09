@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
 import { TestForm } from '@/components/test-form';
+import { QAModule } from '@/components/qa-module';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,11 @@ export default function TraineeDashboard() {
         </div>
 
         <TestForm />
+
+        {/* Q&A Module */}
+        <div className="mt-6">
+          <QAModule currentUser={user} />
+        </div>
 
         <Card className="mt-6">
           <CardHeader>

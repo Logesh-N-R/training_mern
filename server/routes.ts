@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { googleOAuthClient, GOOGLE_OAUTH_SCOPES } from "./config/google-oauth";
+import { connectToDatabase } from './db';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -428,6 +429,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(traineesWithoutPasswords);
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Q&A routes
+  app.get('/api/qa/questions', authenticateToken, async (req, res) => {
+    try {
+      const db = await connectToDatabase();
+      const questions = await db.collection('qa_questions')
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      res.json(questions);
+    } catch (error) {
+      console.error('Error fetching Q&A questions:', error);
+      res.status(500).json({ message: 'Failed to fetch Q&A questions' });
+    }
+  });
+
+  app.post('/api/qa/questions', authenticateToken, async (req, res) => {
+    try {
+      const { title, content } = req.body;
+      const user = (req as any).user;
+
+      if (!title || !content) {
+        return res.status(400).json({ message: 'Title and content are required' });
+      }
+
+      const db = await connectToDatabase();
+      const newQuestion = {
+        title: title.trim(),
+        content: content.trim(),
+        askedBy: {
+          id: user.id,
+          name: user.name,
+          role: user.role
+        },
+        createdAt: new Date().toISOString(),
+        answers: []
+      };
+
+      const result = await db.collection('qa_questions').insertOne(newQuestion);
+
+      res.status(201).json({ 
+        message: 'Question posted successfully',
+        questionId: result.insertedId 
+      });
+    } catch (error) {
+      console.error('Error posting question:', error);
+      res.status(500).json({ message: 'Failed to post question' });
+    }
+  });
+
+  app.post('/api/qa/questions/:questionId/answers', authenticateToken, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const { content } = req.body;
+      const user = (req as any).user;
+
+      if (!content) {
+        return res.status(400).json({ message: 'Answer content is required' });
+      }
+
+      const db = await connectToDatabase();
+      const newAnswer = {
+        _id: new ObjectId(),
+        content: content.trim(),
+        answeredBy: {
+          id: user.id,
+          name: user.name,
+          role: user.role
+        },
+        createdAt: new Date().toISOString()
+      };
+
+      await db.collection('qa_questions').updateOne(
+        { _id: new ObjectId(questionId) },
+        { $push: { answers: newAnswer } }
+      );
+
+      res.status(201).json({ message: 'Answer posted successfully' });
+    } catch (error) {
+      console.error('Error posting answer:', error);
+      res.status(500).json({ message: 'Failed to post answer' });
     }
   });
 

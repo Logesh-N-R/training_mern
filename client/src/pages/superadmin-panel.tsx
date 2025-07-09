@@ -11,6 +11,7 @@ import { Users, Shield, Activity, Database } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
 import React, { useState, useMemo } from 'react';
+import { QAModule } from '@/components/qa-module';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
@@ -46,14 +47,19 @@ export default function SuperAdminPanel() {
         {/* User Management */}
         <UserManagement />
 
+        {/* Submission Management */}
+        <div className="mt-6">
+          <SubmissionManagement userRole={user?.role} />
+        </div>
+
+        {/* Q&A Module */}
+        <div className="mt-6">
+          <QAModule currentUser={user} />
+        </div>
+
         {/* User Tests Dashboard */}
         <div className="mt-6">
           <UserTestsDashboard userRole={user?.role} />
-        </div>
-
-        {/* Submission Management */}
-        <div className="mt-6">
-          <SubmissionManagement userRole="superadmin" />
         </div>
 
         {/* System Analytics */}

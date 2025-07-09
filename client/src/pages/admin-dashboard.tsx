@@ -4,6 +4,7 @@ import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
 import { QuestionUploader } from '@/components/question-uploader';
 import { SubmissionManagement } from '@/components/submission-management';
+import { QAModule } from '@/components/qa-module';
 import { UserTestsDashboard } from '@/components/user-tests-dashboard';
 import { RecentActivity } from '@/components/recent-activity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -167,6 +168,11 @@ export default function AdminDashboard() {
         {/* Submission Management */}
         <div className="mt-6">
           <SubmissionManagement userRole="admin" />
+        </div>
+
+        {/* Q&A Module */}
+        <div className="mt-6">
+          <QAModule currentUser={user} />
         </div>
 
         {/* Trainee Management */}
