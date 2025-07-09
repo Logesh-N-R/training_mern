@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
@@ -22,6 +22,16 @@ export default function AdminDashboard() {
   const [selectedTrainee, setSelectedTrainee] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("dashboard");
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "dashboard");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
 
   const { data: trainees = [], isLoading: loadingTrainees } = useQuery({
     queryKey: ['/api/trainees'],
@@ -84,99 +94,115 @@ export default function AdminDashboard() {
           <p className="text-slate-600">Manage trainees and test questions</p>
         </div>
 
-        {/* Admin Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-6">
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-blue-100 rounded-full">
-                  <Users className="text-blue-600 text-lg md:text-xl" />
-                </div>
-                <div className="ml-3 md:ml-4">
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">{trainees.length}</h3>
-                  <p className="text-sm md:text-base text-slate-600">Total Trainees</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Dashboard Section */}
+        {activeSection === "dashboard" && (
+          <div id="dashboard">
+            {/* Admin Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-6">
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 md:p-3 bg-blue-100 rounded-full">
+                      <Users className="text-blue-600 text-lg md:text-xl" />
+                    </div>
+                    <div className="ml-3 md:ml-4">
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">{trainees.length}</h3>
+                      <p className="text-sm md:text-base text-slate-600">Total Trainees</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="overflow-hidden">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-green-100 rounded-full flex-shrink-0">
-                  <ClipboardCheck className="text-green-600 w-5 h-5 md:w-6 md:h-6" />
-                </div>
-                <div className="ml-3 md:ml-4 min-w-0">
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">{completedTests}</h3>
-                  <p className="text-sm md:text-base text-slate-600 truncate">Completed Tests</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="overflow-hidden">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 md:p-3 bg-green-100 rounded-full flex-shrink-0">
+                      <ClipboardCheck className="text-green-600 w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <div className="ml-3 md:ml-4 min-w-0">
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">{completedTests}</h3>
+                      <p className="text-sm md:text-base text-slate-600 truncate">Completed Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="overflow-hidden">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-purple-100 rounded-full flex-shrink-0">
-                  <Badge className="text-purple-600 w-5 h-5 md:w-6 md:h-6" />
-                </div>
-                <div className="ml-3 md:ml-4 min-w-0">
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">{evaluatedTests}</h3>
-                  <p className="text-sm md:text-base text-slate-600 truncate">Evaluated Tests</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="overflow-hidden">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 md:p-3 bg-purple-100 rounded-full flex-shrink-0">
+                      <Badge className="text-purple-600 w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <div className="ml-3 md:ml-4 min-w-0">
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">{evaluatedTests}</h3>
+                      <p className="text-sm md:text-base text-slate-600 truncate">Evaluated Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-yellow-100 rounded-full">
-                  <Clock className="text-yellow-600 text-lg md:text-xl" />
-                </div>
-                <div className="ml-3 md:ml-4">
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">{pendingTests}</h3>
-                  <p className="text-sm md:text-base text-slate-600">Pending Tests</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 md:p-3 bg-yellow-100 rounded-full">
+                      <Clock className="text-yellow-600 text-lg md:text-xl" />
+                    </div>
+                    <div className="ml-3 md:ml-4">
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">{pendingTests}</h3>
+                      <p className="text-sm md:text-base text-slate-600">Pending Tests</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center">
-                <div className="p-2 md:p-3 bg-indigo-100 rounded-full">
-                  <HelpCircle className="text-indigo-600 text-lg md:text-xl" />
-                </div>
-                <div className="ml-3 md:ml-4">
-                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">{averagePercentage}%</h3>
-                  <p className="text-sm md:text-base text-slate-600">Average Score</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 md:p-3 bg-indigo-100 rounded-full">
+                      <HelpCircle className="text-indigo-600 text-lg md:text-xl" />
+                    </div>
+                    <div className="ml-3 md:ml-4">
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">{averagePercentage}%</h3>
+                      <p className="text-sm md:text-base text-slate-600">Average Score</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
-        {/* Question Upload Section */}
-        <QuestionUploader />
+        {/* Upload Questions Section */}
+        {activeSection === "upload" && (
+          <div id="upload">
+            <QuestionUploader />
+          </div>
+        )}
 
         {/* User Tests Dashboard */}
-        <div className="mt-6">
-          <UserTestsDashboard userRole={user?.role} />
-        </div>
+        {activeSection === "usertests" && (
+          <div id="usertests" className="mt-6">
+            <UserTestsDashboard userRole={user?.role} />
+          </div>
+        )}
 
         {/* Submission Management */}
-        <div className="mt-6">
-          <SubmissionManagement userRole="admin" />
-        </div>
+        {activeSection === "submissions" && (
+          <div id="submissions" className="mt-6">
+            <SubmissionManagement userRole="admin" />
+          </div>
+        )}
 
         {/* Q&A Module */}
-        <div className="mt-6">
-          <QAModule currentUser={user} />
-        </div>
+        {activeSection === "qa" && (
+          <div id="qa" className="mt-6">
+            <QAModule currentUser={user} />
+          </div>
+        )}
 
         {/* Trainee Management */}
-        <Card className="mt-6">
+        {activeSection === "trainees" && (
+          <Card id="trainees" className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Trainee Management</CardTitle>
@@ -347,10 +373,15 @@ export default function AdminDashboard() {
             )}
           </DialogContent>
         </Dialog>
-      {/* Recent Activity */}
-      <div className="mt-6">
-        <RecentActivity userRole={user?.role} />
-      </div>
+        </Card>
+        )}
+
+        {/* Recent Activity */}
+        {activeSection === "activity" && (
+          <div id="activity" className="mt-6">
+            <RecentActivity userRole={user?.role} />
+          </div>
+        )}
       </div>
     </div>
   );

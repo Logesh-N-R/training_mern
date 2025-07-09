@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
@@ -17,6 +17,16 @@ export default function TraineeDashboard() {
   const { user } = useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("test");
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "test");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['/api/submissions/my'],
@@ -119,14 +129,23 @@ export default function TraineeDashboard() {
           <p className="text-slate-600">Complete your daily training test</p>
         </div>
 
-        <TestForm />
+        {/* Test Form Section */}
+        {activeSection === "test" && (
+          <div id="test">
+            <TestForm />
+          </div>
+        )}
 
         {/* Q&A Module */}
-        <div className="mt-6">
-          <QAModule currentUser={user} />
-        </div>
+        {activeSection === "qa" && (
+          <div id="qa" className="mt-6">
+            <QAModule currentUser={user} />
+          </div>
+        )}
 
-        <Card className="mt-6">
+        {/* History Section */}
+        {activeSection === "history" && (
+          <Card id="history" className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
@@ -342,6 +361,66 @@ export default function TraineeDashboard() {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* Export Data Section */}
+        {activeSection === "export" && (
+          <Card id="export" className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileSpreadsheet className="w-5 h-5 mr-2" />
+                Export Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <FileSpreadsheet className="w-12 h-12 text-green-600 mx-auto mb-4" />
+                <p className="text-slate-600 mb-4">Export your submission history to Excel</p>
+                <Button
+                  onClick={exportToExcel}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export to Excel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Progress Tracking Section */}
+        {activeSection === "progress" && (
+          <Card id="progress" className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                Progress Tracking
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-slate-900">Tests Completed</h4>
+                  <p className="text-2xl font-bold text-blue-600">{submissions.filter((s: any) => s.status === 'Completed').length}</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h4 className="font-medium text-slate-900">Average Score</h4>
+                  <p className="text-2xl font-bold text-green-600">
+                    {submissions.filter((s: any) => s.evaluation).length > 0 
+                      ? Math.round(submissions.filter((s: any) => s.evaluation).reduce((sum: number, s: any) => sum + (s.evaluation?.percentage || 0), 0) / submissions.filter((s: any) => s.evaluation).length)
+                      : 0}%
+                  </p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-medium text-slate-900">Recent Activity</h4>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {submissions.length > 0 ? new Date(Math.max(...submissions.map((s: any) => new Date(s.submittedAt).getTime()))).toLocaleDateString() : 'No activity'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Feedback Modal */}
         <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>

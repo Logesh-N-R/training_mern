@@ -9,6 +9,7 @@ export function Navigation() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
 
   if (!user) return null;
 
@@ -16,7 +17,7 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
-          { href: "/test", label: "Take Test", icon: ClipboardList },
+          { href: "/test", label: "Take Test", icon: ClipboardList, section: "test" },
           { href: "/test", label: "Test History", icon: Clock, section: "history" },
           { href: "/test", label: "View Feedback", icon: MessageSquare, section: "feedback" },
           { href: "/test", label: "Q&A Module", icon: HelpCircle, section: "qa" },
@@ -25,7 +26,7 @@ export function Navigation() {
         ];
       case "admin":
         return [
-          { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
+          { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3, section: "dashboard" },
           { href: "/admin/dashboard", label: "Upload Questions", icon: Upload, section: "upload" },
           { href: "/admin/dashboard", label: "Manage Submissions", icon: CheckCircle, section: "submissions" },
           { href: "/admin/dashboard", label: "Evaluate Tests", icon: Star, section: "evaluate" },
@@ -36,7 +37,7 @@ export function Navigation() {
         ];
       case "superadmin":
         return [
-          { href: "/superadmin", label: "Super Admin Panel", icon: Shield },
+          { href: "/superadmin", label: "Super Admin Panel", icon: Shield, section: "panel" },
           { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
           { href: "/superadmin", label: "Role Management", icon: UserCheck, section: "roles" },
           { href: "/superadmin", label: "System Analytics", icon: Database, section: "analytics" },
@@ -44,7 +45,7 @@ export function Navigation() {
           { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
           { href: "/superadmin", label: "User Tests", icon: ClipboardList, section: "usertests" },
           { href: "/superadmin", label: "Recent Activity", icon: Activity, section: "activity" },
-          { href: "/admin/dashboard", label: "Admin View", icon: Settings },
+          { href: "/admin/dashboard", label: "Admin View", icon: Settings, section: "admin" },
         ];
       default:
         return [];
@@ -53,6 +54,14 @@ export function Navigation() {
 
   const handleNavClick = (item: any) => {
     setIsMobileMenuOpen(false);
+    
+    // Set active section for highlighting
+    setActiveSection(item.section || "");
+    
+    // Emit custom event for section navigation
+    window.dispatchEvent(new CustomEvent('navigation-section-change', {
+      detail: { section: item.section || "" }
+    }));
     
     // Handle section-specific navigation
     if (item.section && item.href === location) {
@@ -81,14 +90,14 @@ export function Navigation() {
             <div className="ml-10 flex items-baseline space-x-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive = location === item.href || (item.section && location === item.href);
+                const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
                 
                 return (
                   <Link
                     key={`${item.href}-${index}`}
                     href={item.href}
                     className={`text-slate-700 hover:text-primary px-2 py-2 rounded-md text-xs font-medium flex items-center transition-colors ${
-                      isActive ? "text-primary bg-blue-50" : ""
+                      isActive ? "text-primary bg-blue-50 shadow-sm" : ""
                     }`}
                     onClick={() => handleNavClick(item)}
                   >
@@ -147,7 +156,7 @@ export function Navigation() {
             <div className="space-y-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive = location === item.href || (item.section && location === item.href);
+                const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
                 
                 return (
                   <Link
@@ -155,7 +164,7 @@ export function Navigation() {
                     href={item.href}
                     className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
                       isActive
-                        ? "text-primary bg-blue-50"
+                        ? "text-primary bg-blue-50 shadow-sm"
                         : "text-slate-700 hover:text-primary hover:bg-slate-50"
                     }`}
                     onClick={() => handleNavClick(item)}
