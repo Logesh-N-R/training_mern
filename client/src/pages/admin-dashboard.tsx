@@ -93,10 +93,10 @@ export default function AdminDashboard() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Dashboard</h2>
         </div>
 
-        {/* Tests Module */}
-        {activeSection === "tests" && (
-          <div id="tests" className="space-y-6">
-            {/* Test Statistics */}
+        {/* Dashboard Module */}
+        {activeSection === "dashboard" && (
+          <div id="dashboard" className="space-y-6">
+            {/* Statistics Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
               <Card>
                 <CardContent className="p-4 md:p-6">
@@ -168,7 +168,12 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        )}
 
+        {/* Tests Module */}
+        {activeSection === "tests" && (
+          <div id="tests" className="space-y-6">
             {/* Test Management Tabs */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-1">
@@ -198,6 +203,20 @@ export default function AdminDashboard() {
 
             {/* User Tests Dashboard */}
             <UserTestsDashboard userRole={user?.role} />
+          </div>
+        )}
+
+        {/* Questions Module */}
+        {activeSection === "questions" && (
+          <div id="questions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Question Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">Manage question banks, edit existing questions, and organize test content.</p>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -303,8 +322,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Q&A Module */}
-        {activeSection === "qa" && (
+        {/* Community Module */}
+        {activeSection === "community" && (
           <div id="qa" className="mt-6">
             <QAModule currentUser={user} />
           </div>

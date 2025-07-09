@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation } from "wouter";
@@ -29,24 +28,30 @@ export function Navigation() {
     switch (user.role) {
       case "trainee":
         return [
+          { href: "/dashboard", label: "Dashboard", icon: BarChart3, section: "dashboard" },
           { href: "/test", label: "Tests", icon: ClipboardList, section: "test" },
-          { href: "/test", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/test", label: "History & Progress", icon: BarChart3, section: "history" },
-          { href: "/test", label: "Others", icon: Settings, section: "others" },
+          { href: "/questions", label: "Questions", icon: FileText, section: "questions" },
+          { href: "/community", label: "Community", icon: HelpCircle, section: "qa" },
+          { href: "/history", label: "History & Progress", icon: BarChart3, section: "history" },
+          { href: "/others", label: "Others", icon: Settings, section: "others" },
         ];
       case "admin":
         return [
-          { href: "/admin/dashboard", label: "Tests", icon: ClipboardList, section: "tests" },
-          { href: "/admin/dashboard", label: "User Management", icon: Users, section: "users" },
-          { href: "/admin/dashboard", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/admin/dashboard", label: "Others", icon: Settings, section: "others" },
+          { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3, section: "dashboard" },
+          { href: "/admin/tests", label: "Tests", icon: ClipboardList, section: "tests" },
+          { href: "/admin/questions", label: "Questions", icon: FileText, section: "questions" },
+          { href: "/admin/users", label: "User Management", icon: Users, section: "users" },
+          { href: "/admin/community", label: "Community", icon: HelpCircle, section: "qa" },
+          { href: "/admin/others", label: "Others", icon: Settings, section: "others" },
         ];
       case "superadmin":
         return [
-          { href: "/superadmin", label: "Tests", icon: ClipboardList, section: "tests" },
-          { href: "/superadmin", label: "User Management", icon: Users, section: "users" },
-          { href: "/superadmin", label: "Q&A Module", icon: HelpCircle, section: "qa" },
-          { href: "/superadmin", label: "Others", icon: Settings, section: "others" },
+          { href: "/superadmin/dashboard", label: "Dashboard", icon: BarChart3, section: "dashboard" },
+          { href: "/superadmin/tests", label: "Tests", icon: ClipboardList, section: "tests" },
+          { href: "/superadmin/questions", label: "Questions", icon: FileText, section: "questions" },
+          { href: "/superadmin/users", label: "User Management", icon: Users, section: "users" },
+          { href: "/superadmin/community", label: "Community", icon: HelpCircle, section: "qa" },
+          { href: "/superadmin/others", label: "Others", icon: Settings, section: "others" },
         ];
       default:
         return [];
@@ -55,15 +60,15 @@ export function Navigation() {
 
   const handleNavClick = (item: any) => {
     setIsMobileMenuOpen(false);
-    
+
     // Set active section for highlighting
     setActiveSection(item.section || "");
-    
+
     // Emit custom event for section navigation
     window.dispatchEvent(new CustomEvent('navigation-section-change', {
       detail: { section: item.section || "" }
     }));
-    
+
     // Handle section-specific navigation
     if (item.section && item.href === location) {
       // If we're already on the page, scroll to the section
@@ -76,7 +81,7 @@ export function Navigation() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       toast({
         title: "Error",
@@ -96,7 +101,7 @@ export function Navigation() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
@@ -154,7 +159,7 @@ export function Navigation() {
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
                 const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
-                
+
                 return (
                   <Link
                     key={`${item.href}-${index}`}
@@ -239,7 +244,7 @@ export function Navigation() {
                           required
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="new-password">New Password</Label>
                         <Input
@@ -252,7 +257,7 @@ export function Navigation() {
                           minLength={6}
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="confirm-password">Confirm New Password</Label>
                         <Input
@@ -265,7 +270,7 @@ export function Navigation() {
                           minLength={6}
                         />
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2">
                         <Button
                           type="button"
@@ -317,7 +322,7 @@ export function Navigation() {
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
                 const isActive = location === item.href && (activeSection === item.section || (!activeSection && !item.section));
-                
+
                 return (
                   <Link
                     key={`mobile-${item.href}-${index}`}
@@ -334,7 +339,7 @@ export function Navigation() {
                   </Link>
                 );
               })}
-              
+
               <div className="border-t border-slate-200 pt-3 mt-3">
                 <div className="px-3 py-2">
                   <div className="flex items-center space-x-3">
@@ -396,7 +401,7 @@ export function Navigation() {
                             required
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label htmlFor="new-password-mobile">New Password</Label>
                           <Input
@@ -409,7 +414,7 @@ export function Navigation() {
                             minLength={6}
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label htmlFor="confirm-password-mobile">Confirm New Password</Label>
                           <Input
@@ -422,7 +427,7 @@ export function Navigation() {
                             minLength={6}
                           />
                         </div>
-                        
+
                         <div className="flex justify-end space-x-2">
                           <Button
                             type="button"

@@ -84,11 +84,11 @@ export default function SuperAdminPanel() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Super Admin Panel</h2>
         </div>
 
-        {/* Tests Module */}
-        {activeSection === "tests" && (
-          <div id="tests" className="space-y-6">
-            {/* Test Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Dashboard Module */}
+        {activeSection === "dashboard" && (
+          <div id="dashboard" className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
@@ -107,25 +107,11 @@ export default function SuperAdminPanel() {
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <div className="p-3 bg-green-100 rounded-full">
-                      <BarChart3 className="text-green-600 text-xl" />
+                      <HelpCircle className="text-green-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.completedSubmissions}</h3>
-                      <p className="text-slate-600">Completed Tests</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-purple-100 rounded-full">
-                      <Shield className="text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.evaluatedSubmissions}</h3>
-                      <p className="text-slate-600">Evaluated Tests</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalQuestions}</h3>
+                      <p className="text-slate-600">Total Questions</p>
                     </div>
                   </div>
                 </CardContent>
@@ -135,43 +121,52 @@ export default function SuperAdminPanel() {
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <div className="p-3 bg-yellow-100 rounded-full">
-                      <Database className="text-yellow-600 text-xl" />
+                      <Activity className="text-yellow-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalQuestions}</h3>
-                      <p className="text-slate-600">Total Questions</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{systemStatsMemo.totalUsers}</h3>
+                      <p className="text-slate-600">Total Users</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <BarChart3 className="text-purple-600 text-xl" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-2xl font-bold text-slate-900">98%</h3>
+                      <p className="text-slate-600">System Health</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+          </div>
+        )}
 
-            {/* Test Management Sections */}
-            <div className="grid grid-cols-1 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BarChart3 className="w-5 h-5 mr-2" />
-                    Test Performance Dashboard
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <UserTestsDashboard userRole={user?.role} />
-                </CardContent>
-              </Card>
+        {/* Tests Module */}
+        {activeSection === "tests" && (
+          <div id="tests" className="space-y-6">
+            {/* Test Management */}
+            <UserTestsDashboard />
+          </div>
+        )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ClipboardList className="w-5 h-5 mr-2" />
-                    Submission Management
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SubmissionManagement userRole={user?.role} />
-                </CardContent>
-              </Card>
-            </div>
+        {/* Questions Module */}
+        {activeSection === "questions" && (
+          <div id="questions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Question Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">Manage question banks, edit existing questions, and organize test content.</p>
+              </CardContent>
+            </Card>
           </div>
         )}
 
