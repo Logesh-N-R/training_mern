@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,22 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ApiService } from '@/services/api';
 import { testFormSchema, type TestFormData } from '@shared/schema';
 import { QuestionRenderer } from '@/components/question-renderer';
-import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
-
-const testFormSchema = z.object({
-  questionAnswers: z.array(
-    z.object({
-      topic: z.string(),
-      question: z.string(),
-      answer: z.string().min(1, "Answer is required"),
-    }),
-  ),
-  overallUnderstanding: z.string().min(1, "Please select understanding level"),
-  status: z.string().min(1, "Please select status"),
-  remarks: z.string().optional(),
-});
-
-type TestFormData = z.infer<typeof testFormSchema>;
+import { Clock, CheckCircle, AlertCircle, Calendar, Badge, Send } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function TestForm() {
   const { toast } = useToast();
