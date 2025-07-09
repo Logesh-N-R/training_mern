@@ -78,3 +78,24 @@
 .slate-bg {
   background-color: hsl(210, 40%, 96%);
 }
+
+/* Mobile-specific utilities */
+@media (max-width: 768px) {
+  .mobile-table {
+    font-size: 0.875rem;
+  }
+  
+  .mobile-card {
+    padding: 1rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.75rem;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}

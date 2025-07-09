@@ -180,14 +180,14 @@ export function QuestionUploader() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <Label>Topics & Questions</Label>
+            <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0 mb-4">
+              <Label className="text-sm md:text-base">Topics & Questions</Label>
               <Button
                 type="button"
                 onClick={addTopicSection}
                 variant="outline"
                 size="sm"
-                className="flex items-center"
+                className="flex items-center self-start md:self-auto"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Topic
@@ -196,16 +196,16 @@ export function QuestionUploader() {
 
             <div className="space-y-6">
               {topicSections.map((topicSection, topicIndex) => (
-                <div key={topicIndex} className="border rounded-lg p-4 space-y-4 bg-slate-50">
+                <div key={topicIndex} className="border rounded-lg p-3 md:p-4 space-y-4 bg-slate-50">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-slate-700">Topic {topicIndex + 1}</h4>
+                    <h4 className="font-medium text-slate-700 text-sm md:text-base">Topic {topicIndex + 1}</h4>
                     {topicSections.length > 1 && (
                       <Button
                         type="button"
                         onClick={() => removeTopicSection(topicIndex)}
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 p-1 md:p-2"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

@@ -50,7 +50,7 @@ export default function TraineeDashboard() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'My Submissions');
-    
+
     const fileName = `my_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
@@ -111,15 +111,15 @@ export default function TraineeDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navigation />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Trainee Dashboard</h2>
           <p className="text-slate-600">Complete your daily training test</p>
         </div>
-        
+
         <TestForm />
-        
+
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -280,13 +280,13 @@ export default function TraineeDashboard() {
                               {qa.score || 0}/10
                             </Badge>
                           </div>
-                          
+
                           <div className="space-y-3">
                             <div>
                               <label className="text-xs font-medium text-slate-700">Your Answer:</label>
                               <p className="text-slate-900 mt-1 p-2 bg-slate-50 rounded">{qa.answer}</p>
                             </div>
-                            
+
                             {qa.feedback && (
                               <div>
                                 <label className="text-xs font-medium text-slate-700">Instructor's Feedback:</label>
