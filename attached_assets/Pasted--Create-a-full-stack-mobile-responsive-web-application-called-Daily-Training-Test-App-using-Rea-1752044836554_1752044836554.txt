@@ -1,0 +1,137 @@
+```
+Create a full-stack mobile-responsive web application called "Daily Training Test App" using React (frontend) and Node.js with Express (backend). The app manages daily trainee test forms and includes modules for trainee interaction, admin dashboard, and super admin control. Instead of a database, use local JSON files on the server for all data storage.
+
+🧠 Features Overview:
+
+👨‍🎓 Trainee Module:
+- Registration and login (JWT-based)
+- Responsive daily test form auto-loaded by date from local JSON
+- Test form includes:
+  - Date, Day, Session Title
+  - Multiple questions (topic + question)
+  - Textareas for answers
+  - Dropdowns for understanding level and test status
+- Form submission saves answers to a JSON file
+- View own past submissions (read from JSON)
+
+👩‍💼 Admin Dashboard:
+- Login with role detection
+- View all trainees and their test submission status
+- Upload test questions for specific dates and sessions
+- Edit or delete previously uploaded question sets
+- Filter test results by date, trainee, or session
+- View trainee answers per session
+- Export test submissions (optional CSV)
+- Admin cannot create other admins
+
+🦸 Super Admin Panel:
+- A single superadmin account is auto-created on first run
+- Only superadmin can:
+  - Create and manage admin users
+  - View all users, questions, and submissions
+  - Promote/demote roles except superadmin
+- Superadmin is protected (cannot be deleted or demoted)
+- Superadmin has full access to both admin and trainee views
+
+🧩 Question Upload Module:
+- Admin uploads a set of questions per training day
+- Fields: Date, Session Title, Array of { topic, question }
+- Saved to a local JSON file (e.g., data/questions.json)
+- Duplicate date checks to prevent re-entry
+
+📁 JSON File Structure:
+
+1. users.json
+[
+  {
+    "id": "1",
+    "name": "Admin",
+    "email": "admin@test.com",
+    "password": "<hashed>",
+    "role": "superadmin"
+  }
+]
+
+2. questions.json
+[
+  {
+    "date": "2025-07-10",
+    "sessionTitle": "Hotel Booking Overview",
+    "questions": [
+      { "topic": "API Structure", "question": "Explain request/response cycle." }
+    ],
+    "createdBy": "admin@test.com",
+    "createdAt": "ISO timestamp"
+  }
+]
+
+3. submissions.json
+[
+  {
+    "userId": "2",
+    "date": "2025-07-10",
+    "sessionTitle": "Hotel Booking Overview",
+    "questionAnswers": [
+      {
+        "topic": "API Structure",
+        "question": "Explain...",
+        "answer": "It handles..."
+      }
+    ],
+    "overallUnderstanding": "Good",
+    "remarks": "Completed",
+    "status": "Completed"
+  }
+]
+
+🔐 Auth & Routing:
+- JWT authentication for all users
+- On login, redirect based on role:
+  - trainee → /test
+  - admin → /admin/dashboard
+  - superadmin → /superadmin
+- Role-based route guards on backend and frontend
+- Only superadmin can access admin creation endpoints
+
+📱 Frontend (React):
+- React Router for page routing
+- Context API for auth and role state
+- Axios for API requests
+- TailwindCSS for full mobile responsiveness
+
+🖥️ Backend (Node + Express):
+- File-based JSON storage (fs module)
+- Routes: /auth, /test, /admin, /superadmin
+- Middleware for auth + role protection
+- Load and write JSON data from local files
+
+📁 Folder Structure:
+/client
+  /src
+    /pages → Login, Register, TestForm, Dashboard, AdminDashboard, SuperAdminPanel
+    /components → TestForm, QuestionUploader, SubmissionList
+    /context → AuthContext, RoleContext
+    /services → API client
+
+/server
+  /data → users.json, questions.json, submissions.json
+  /routes → auth.js, test.js, admin.js, superadmin.js
+  /middleware → authCheck.js, roleCheck.js
+  server.js
+
+📦 Install:
+Frontend:
+- react-router-dom
+- axios
+- tailwindcss
+
+Backend:
+- express
+- bcryptjs
+- jsonwebtoken
+- cors
+- dotenv
+- fs (built-in for file read/write)
+
+Start with user auth using JSON file, then build question uploader, test form, admin dashboard, and superadmin tools using local file-based storage.
+```

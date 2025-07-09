@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1752045362769cqtn7rrru",
+    "name": "Super Admin",
+    "email": "admin@test.com",
+    "password": "$2b$10$L0o6TSEhiWnn2eYiAQTBauwT/54NtBNdYRU95wG5H6PuTOSfl8o0y",
+    "role": "superadmin",
+    "createdAt": "2025-07-09T07:16:02.769Z"
+  },
+  {
+    "id": "175205220211721g5yayq2",
+    "name": "loki",
+    "email": "Loki@123.com",
+    "password": "$2b$10$L0o6TSEhiWnn2eYiAQTBauwT/54NtBNdYRU95wG5H6PuTOSfl8o0y",
+    "role": "trainee",
+    "createdAt": "2025-07-09T09:10:02.117Z"
+  },
+  {
+    "id": "175205233971142oadtota",
+    "name": "admin",
+    "email": "admin@123.com",
+    "password": "$2b$10$ji8U7a3NMBoF.4GMcLx2FOxifPgHDsol2qkdkvRFySXs81Ys911uK",
+    "role": "admin",
+    "createdAt": "2025-07-09T09:12:19.711Z"
+  }
+]
