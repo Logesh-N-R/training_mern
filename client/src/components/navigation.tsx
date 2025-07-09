@@ -14,13 +14,13 @@ export function Navigation() {
       case "trainee":
         return [
           { href: "/test", label: "Test", icon: ClipboardList },
-          { href: "/test/history", label: "History", icon: BarChart3 },
+          //{ href: "/test/history", label: "History", icon: BarChart3 },
         ];
       case "admin":
         return [
           { href: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
-          { href: "/admin/questions", label: "Questions", icon: ClipboardList },
-          { href: "/admin/trainees", label: "Trainees", icon: Users },
+          //{ href: "/admin/questions", label: "Questions", icon: ClipboardList },
+          //{ href: "/admin/trainees", label: "Trainees", icon: Users },
         ];
       case "superadmin":
         return [
