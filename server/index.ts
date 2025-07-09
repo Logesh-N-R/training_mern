@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { connectToDatabase } from "./db";
+import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import path from "path";
 import multer from "multer";
