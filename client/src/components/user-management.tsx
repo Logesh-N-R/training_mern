@@ -26,6 +26,16 @@ const editUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   role: z.enum(['trainee', 'admin', 'superadmin']),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+  if (data.password && data.password !== data.confirmPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type CreateUserData = z.infer<typeof createUserSchema>;
@@ -39,6 +49,7 @@ export function UserManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['/api/users'],
@@ -61,6 +72,8 @@ export function UserManagement() {
       name: '',
       email: '',
       role: 'trainee',
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -153,16 +166,27 @@ export function UserManagement() {
 
   const onEditSubmit = (data: EditUserData) => {
     if (selectedUser) {
-      editUserMutation.mutate({ userId: selectedUser.id, data });
+      const submitData = { ...data };
+      // Only include password if it's being changed
+      if (!data.password) {
+        delete submitData.password;
+        delete submitData.confirmPassword;
+      } else {
+        delete submitData.confirmPassword; // Don't send confirmPassword to server
+      }
+      editUserMutation.mutate({ userId: selectedUser.id, data: submitData });
     }
   };
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
+    setShowPasswordFields(false);
     editForm.reset({
       name: user.name,
       email: user.email,
       role: user.role as 'trainee' | 'admin' | 'superadmin',
+      password: '',
+      confirmPassword: '',
     });
     setIsEditModalOpen(true);
   };
@@ -341,6 +365,55 @@ export function UserManagement() {
                     <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.role.message}</p>
                   )}
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="reset-password"
+                      checked={showPasswordFields}
+                      onChange={(e) => {
+                        setShowPasswordFields(e.target.checked);
+                        if (!e.target.checked) {
+                          editForm.setValue('password', '');
+                          editForm.setValue('confirmPassword', '');
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="reset-password" className="text-sm">Reset Password</Label>
+                  </div>
+                </div>
+
+                {showPasswordFields && (
+                  <>
+                    <div>
+                      <Label htmlFor="edit-password">New Password</Label>
+                      <Input
+                        id="edit-password"
+                        type="password"
+                        placeholder="Enter new password"
+                        {...editForm.register('password')}
+                      />
+                      {editForm.formState.errors.password && (
+                        <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-confirm-password">Confirm New Password</Label>
+                      <Input
+                        id="edit-confirm-password"
+                        type="password"
+                        placeholder="Confirm new password"
+                        {...editForm.register('confirmPassword')}
+                      />
+                      {editForm.formState.errors.confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">{editForm.formState.errors.confirmPassword.message}</p>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div className="flex justify-end space-x-4 mt-6">
                   <Button

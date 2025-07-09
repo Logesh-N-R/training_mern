@@ -387,6 +387,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid role' });
       }
 
+      // Hash password if it's being updated
+      if (allowedUpdates.password) {
+        allowedUpdates.password = await bcrypt.hash(allowedUpdates.password, 10);
+      }
+
       const user = await storage.updateUser(id, allowedUpdates);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
