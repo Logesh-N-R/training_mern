@@ -9,6 +9,7 @@ import {
   registerSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { googleOAuthClient, GOOGLE_OAUTH_SCOPES } from "./config/google-oauth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -84,6 +85,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  // Google OAuth routes
+  app.get('/api/auth/google', (req, res) => {
+    const authUrl = googleOAuthClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: GOOGLE_OAUTH_SCOPES,
+    });
+    res.redirect(authUrl);
+  });
+
+  app.get('/api/auth/google/callback', async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        return res.redirect('/login?error=no_code');
+      }
+
+      const { tokens } = await googleOAuthClient.getToken(code as string);
+      googleOAuthClient.setCredentials(tokens);
+
+      const ticket = await googleOAuthClient.verifyIdToken({
+        idToken: tokens.id_token!,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        return res.redirect('/login?error=invalid_token');
+      }
+
+      const { email, name, picture } = payload;
+      
+      if (!email || !name) {
+        return res.redirect('/login?error=incomplete_profile');
+      }
+
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Create new user with Google account
+        user = await storage.createUser({
+          name,
+          email,
+          password: '', // No password for Google users
+          role: 'trainee'
+        });
+      }
+
+      const token = generateToken({ id: user.id, email: user.email, role: user.role });
+      
+      // Redirect to frontend with token
+      res.redirect(`/login?token=${token}`);
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      res.redirect('/login?error=oauth_failed');
     }
   });
 

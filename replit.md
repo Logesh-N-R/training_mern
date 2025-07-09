@@ -8,6 +8,22 @@ This is a full-stack web application called "Daily Training Test App" built with
 
 Preferred communication style: Simple, everyday language.
 
+## Google OAuth Setup
+
+To enable Google Single Sign-On (SSO):
+
+1. Go to [Google Cloud Console](https://console.developers.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Google+ API
+4. Go to Credentials → Create Credentials → OAuth 2.0 Client ID
+5. Set application type to "Web application"
+6. Add your redirect URI: `https://your-repl-name.your-username.repl.co/api/auth/google/callback`
+7. Copy your Client ID and Client Secret
+8. Add them to your Replit Secrets:
+   - `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID
+   - `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret
+   - `GOOGLE_REDIRECT_URI`: Your redirect URI (optional, defaults to localhost for development)
+
 ## System Architecture
 
 ### Frontend Architecture
