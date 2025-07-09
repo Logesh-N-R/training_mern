@@ -56,18 +56,6 @@ export function TestForm() {
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
 
-  const todayDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
-  const formattedDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   // Aggregate all questions from different question sets
   const allQuestions = React.useMemo(() => {
     if (!questionSets) return [];
@@ -95,23 +83,6 @@ export function TestForm() {
   
   const alreadySubmitted = todaySubmission && todaySubmission.evaluation;
 
-  React.useEffect(() => {
-    if (allQuestions.length > 0) {
-      form.reset({
-        questionAnswers: allQuestions.map(q => ({
-          topic: q.topic,
-          question: q.question,
-          answer: ''
-        })),
-        overallUnderstanding: '',
-        status: '',
-        remarks: ''
-      });
-    }
-  }, [allQuestions, form]);
-
-
-
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
       return ApiService.post('/api/submissions', {
@@ -138,6 +109,21 @@ export function TestForm() {
     },
   });
 
+  React.useEffect(() => {
+    if (allQuestions.length > 0) {
+      form.reset({
+        questionAnswers: allQuestions.map(q => ({
+          topic: q.topic,
+          question: q.question,
+          answer: ''
+        })),
+        overallUnderstanding: '',
+        status: '',
+        remarks: ''
+      });
+    }
+  }, [allQuestions, form]);
+
   const onSubmit = async (data: TestFormData) => {
     setIsSubmitting(true);
     try {
@@ -146,6 +132,12 @@ export function TestForm() {
       setIsSubmitting(false);
     }
   };
+
+  const todayDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   if (isLoading) {
     return (
