@@ -197,7 +197,132 @@ export function TestForm() {
         </div>
       </CardHeader>
       <CardContent>
-         
+        {/* Group questions by topic */}
+        {React.useMemo(() => {
+          const groupedQuestions = allQuestions.reduce((acc: any, question: any, index: number) => {
+            const topic = question.topic;
+            if (!acc[topic]) {
+              acc[topic] = [];
+            }
+            acc[topic].push({ ...question, originalIndex: index });
+            return acc;
+          }, {});
+
+          return Object.entries(groupedQuestions).map(([topic, questions]: [string, any]) => (
+            <Card key={topic} className="mb-6 border-l-4 border-l-primary">
+              <CardHeader className="pb-4">
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                  <Badge variant="outline" className="mr-2 bg-primary/10 text-primary">
+                    {topic}
+                  </Badge>
+                  <span className="text-sm text-slate-600 ml-auto">
+                    {questions.length} question{questions.length > 1 ? 's' : ''}
+                  </span>
+                </h3>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  {questions.map((question: any, questionIndex: number) => (
+                    <div key={question.originalIndex} className="p-4 bg-slate-50 rounded-lg border">
+                      <div className="flex items-start mb-3">
+                        <Badge variant="secondary" className="mr-3 mt-1 bg-slate-200 text-slate-700">
+                          Q{questionIndex + 1}
+                        </Badge>
+                        <div className="flex-1">
+                          <p className="text-slate-900 font-medium mb-3">{question.question}</p>
+                          <Textarea
+                            rows={4}
+                            placeholder="Enter your answer here..."
+                            className="resize-none bg-white border-slate-300 focus:border-primary"
+                            {...register(`questionAnswers.${question.originalIndex}.answer`)}
+                            onChange={(e) => {
+                              setValue(`questionAnswers.${question.originalIndex}`, {
+                                topic: question.topic,
+                                question: question.question,
+                                answer: e.target.value,
+                              });
+                            }}
+                          />
+                          {errors.questionAnswers?.[question.originalIndex]?.answer && (
+                            <p className="text-red-500 text-sm mt-1">
+                              {errors.questionAnswers[question.originalIndex]?.answer?.message}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </form>
+              </CardContent>
+            </Card>
+          ));
+        }, [allQuestions, register, setValue, errors])}
+
+        {/* Submission Form Controls */}
+        {allQuestions.length > 0 && (
+          <Card className="mt-6 bg-blue-50 border-blue-200">
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label>Overall Understanding</Label>
+                    <Select onValueChange={(value) => setValue('overallUnderstanding', value)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select understanding level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Excellent">Excellent</SelectItem>
+                        <SelectItem value="Good">Good</SelectItem>
+                        <SelectItem value="Average">Average</SelectItem>
+                        <SelectItem value="Poor">Poor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.overallUnderstanding && (
+                      <p className="text-red-500 text-sm mt-1">{errors.overallUnderstanding.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Test Status</Label>
+                    <Select onValueChange={(value) => setValue('status', value)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Not Started">Not Started</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.status && (
+                      <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Additional Remarks</Label>
+                  <Textarea
+                    rows={3}
+                    placeholder="Any additional comments or questions..."
+                    className="resize-none bg-white"
+                    {...register('remarks')}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-primary hover:bg-blue-700"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {isSubmitting ? 'Submitting...' : 'Submit Test'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </CardContent>
     </Card>
   );
