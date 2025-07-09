@@ -301,98 +301,202 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
             <p className="text-slate-600">No submissions found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Trainee</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Session</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Date</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Understanding</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Score</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Grade</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                      <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                    </tr>
-                  </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredSubmissions.map((submission: Submission) => (
-                  <tr key={submission.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2 text-slate-400" />
-                        <span className="text-slate-900">{getUserName(submission.userId)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2 text-slate-400" />
-                        <span className="text-slate-600">
-                          {new Date(submission.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                          <Badge className={getUnderstandingColor(submission.overallUnderstanding)}>
-                            {submission.overallUnderstanding}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          {submission.evaluation ? (
-                            <span className="font-medium text-slate-900">
-                              {submission.evaluation.totalScore}/{submission.evaluation.maxScore}
-                              <span className="text-slate-600 text-sm ml-1">
-                                ({submission.evaluation.percentage}%)
-                              </span>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Trainee</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Session</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Date</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Understanding</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Score</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Grade</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredSubmissions.map((submission: Submission) => (
+                    <tr key={submission.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          <User className="w-4 h-4 mr-2 text-slate-400" />
+                          <span className="text-slate-900">{getUserName(submission.userId)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+                          <span className="text-slate-600">
+                            {new Date(submission.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={getUnderstandingColor(submission.overallUnderstanding)}>
+                          {submission.overallUnderstanding}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {submission.evaluation ? (
+                          <span className="font-medium text-slate-900">
+                            {submission.evaluation.totalScore}/{submission.evaluation.maxScore}
+                            <span className="text-slate-600 text-sm ml-1">
+                              ({submission.evaluation.percentage}%)
                             </span>
-                          ) : (
-                            <span className="text-slate-400 text-sm">Not evaluated</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {submission.evaluation ? (
-                            <Badge className={getGradeColor(submission.evaluation.grade)}>
-                              {submission.evaluation.grade}
-                            </Badge>
-                          ) : (
-                            <span className="text-slate-400 text-sm">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge className={getStatusColor(submission.status)}>
-                            {submission.status}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-sm">Not evaluated</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {submission.evaluation ? (
+                          <Badge className={getGradeColor(submission.evaluation.grade)}>
+                            {submission.evaluation.grade}
                           </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex space-x-2">
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={getStatusColor(submission.status)}>
+                          {submission.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-primary hover:text-blue-700"
+                            onClick={() => handleViewSubmission(submission)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          {(userRole === 'admin' || userRole === 'superadmin') && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="text-primary hover:text-blue-700"
-                              onClick={() => handleViewSubmission(submission)}
+                              className="text-green-600 hover:text-green-700"
+                              onClick={() => handleEvaluateSubmission(submission)}
                             >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
+                              <Star className="w-4 h-4 mr-1" />
+                              {submission.evaluation ? 'Re-evaluate' : 'Evaluate'}
                             </Button>
-                            {(userRole === 'admin' || userRole === 'superadmin') && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-green-600 hover:text-green-700"
-                                onClick={() => handleEvaluateSubmission(submission)}
-                              >
-                                <Star className="w-4 h-4 mr-1" />
-                                {submission.evaluation ? 'Re-evaluate' : 'Evaluate'}
-                              </Button>
-                            )}
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {filteredSubmissions.map((submission: Submission) => (
+                <Card key={submission.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center flex-1 min-w-0">
+                        <div className="p-2 bg-slate-100 rounded-full mr-3 flex-shrink-0">
+                          <User className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-slate-900 truncate">{getUserName(submission.userId)}</h3>
+                          <p className="text-sm text-slate-600 truncate">{submission.sessionTitle}</p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-1 flex-shrink-0 ml-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-primary hover:text-blue-700 p-2"
+                          onClick={() => handleViewSubmission(submission)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-green-600 hover:text-green-700 p-2"
+                            onClick={() => handleEvaluateSubmission(submission)}
+                          >
+                            <Star className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 mb-1">Date</p>
+                        <div className="flex items-center">
+                          <Calendar className="w-3 h-3 mr-1 text-slate-400" />
+                          <span className="text-sm text-slate-600">
+                            {new Date(submission.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 mb-1">Understanding</p>
+                        <Badge className={`text-xs ${getUnderstandingColor(submission.overallUnderstanding)}`}>
+                          {submission.overallUnderstanding}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 mb-1">Score</p>
+                        {submission.evaluation ? (
+                          <div>
+                            <span className="font-medium text-slate-900 text-sm">
+                              {submission.evaluation.totalScore}/{submission.evaluation.maxScore}
+                            </span>
+                            <span className="text-slate-600 text-xs ml-1">
+                              ({submission.evaluation.percentage}%)
+                            </span>
                           </div>
-                        </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">Not evaluated</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 mb-1">Grade</p>
+                        {submission.evaluation ? (
+                          <Badge className={`text-xs ${getGradeColor(submission.evaluation.grade)}`}>
+                            {submission.evaluation.grade}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1 text-slate-400" />
+                        <span className="text-sm text-slate-600">
+                          {new Date(submission.submittedAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <Badge className={`text-xs ${getStatusColor(submission.status)}`}>
+                        {submission.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
 
         {/* View Submission Modal */}
