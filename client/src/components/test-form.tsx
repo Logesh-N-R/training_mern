@@ -81,7 +81,9 @@ export function TestForm() {
     );
   }, [submissions]);
   
-  const alreadySubmitted = todaySubmission && todaySubmission.evaluation;
+  const alreadySubmitted = React.useMemo(() => {
+    return todaySubmission && todaySubmission.evaluation;
+  }, [todaySubmission]);
 
   const submitMutation = useMutation({
     mutationFn: (data: TestFormData) => {
@@ -133,11 +135,13 @@ export function TestForm() {
     }
   };
 
-  const todayDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const todayDate = React.useMemo(() => {
+    return new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }, []);
 
   if (isLoading) {
     return (
