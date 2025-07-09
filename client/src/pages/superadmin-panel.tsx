@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Activity, Database } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
+import React, { useState } from 'react';
 
 export default function SuperAdminPanel() {
   const { user } = useAuthRedirect();
@@ -40,7 +41,7 @@ export default function SuperAdminPanel() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navigation />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Super Admin Panel</h2>
