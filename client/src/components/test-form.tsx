@@ -45,6 +45,12 @@ export default function TestForm({ questionSet, onSubmit, existingSubmission }: 
   const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
   const [isCompleted, setIsCompleted] = useState(false);
 
+  const handleAutoSubmit = useCallback(() => {
+    setStatus('Completed');
+    setIsCompleted(true);
+    handleSubmit(true);
+  }, []);
+
   // Initialize form with existing submission data if available
   useEffect(() => {
     if (existingSubmission) {
@@ -70,13 +76,7 @@ export default function TestForm({ questionSet, onSubmit, existingSubmission }: 
     } else if (timeRemaining === 0 && !isCompleted) {
       handleAutoSubmit();
     }
-  }, [timeRemaining, isCompleted]);
-
-  const handleAutoSubmit = useCallback(() => {
-    setStatus('Completed');
-    setIsCompleted(true);
-    handleSubmit(true);
-  }, []);
+  }, [timeRemaining, isCompleted, handleAutoSubmit]);
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     setAnswers(prev => ({
