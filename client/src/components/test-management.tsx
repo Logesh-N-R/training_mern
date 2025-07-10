@@ -372,13 +372,15 @@ export function TestManagement({ userRole }: TestManagementProps) {
           </DialogHeader>
           {selectedTest && (
             <TestForm 
-              questions={selectedTest.question.questions}
-              questionSetId={selectedTest.question._id}
-              date={selectedTest.question.date}
-              sessionTitle={selectedTest.question.sessionTitle}
+              questionSet={{
+                _id: selectedTest.question._id,
+                date: selectedTest.question.date,
+                sessionTitle: selectedTest.question.sessionTitle,
+                questions: selectedTest.question.questions,
+                createdBy: selectedTest.question.createdBy
+              }}
+              onSubmit={handleTestComplete}
               existingSubmission={selectedTest.submission}
-              onComplete={handleTestComplete}
-              canEdit={selectedTest.canEdit}
             />
           )}
         </DialogContent>
