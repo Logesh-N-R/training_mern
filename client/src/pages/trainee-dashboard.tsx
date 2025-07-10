@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
+import { toast } from '@/hooks/use-toast';
 import { TestForm } from '@/components/test-form';
 import { QAModule } from '@/components/qa-module';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
