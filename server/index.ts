@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { connectToDatabase } from "./db";
@@ -67,7 +66,7 @@ async function startServer() {
   try {
     // Initialize MongoDB connection and super admin
     await connectToDatabase();
-    
+
     const { storage } = await import('./storage');
     await storage.initializeSuperAdmin();
 
