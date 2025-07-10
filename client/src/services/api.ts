@@ -12,10 +12,16 @@ export class ApiService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      // Extract just the error message without status code
-      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
-      throw new Error(cleanError);
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || response.statusText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text();
+        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+        throw new Error(cleanError);
+      }
     }
     
     return response.json();
@@ -32,10 +38,16 @@ export class ApiService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      // Extract just the error message without status code
-      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
-      throw new Error(cleanError);
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || response.statusText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text();
+        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+        throw new Error(cleanError);
+      }
     }
     
     return response.json();
@@ -52,10 +64,16 @@ export class ApiService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      // Extract just the error message without status code
-      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
-      throw new Error(cleanError);
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || response.statusText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text();
+        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+        throw new Error(cleanError);
+      }
     }
     
     return response.json();
@@ -68,10 +86,16 @@ export class ApiService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      // Extract just the error message without status code
-      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
-      throw new Error(cleanError);
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || response.statusText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text();
+        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+        throw new Error(cleanError);
+      }
     }
     
     return response.json();
@@ -85,10 +109,16 @@ export class ApiService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      // Extract just the error message without status code
-      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
-      throw new Error(cleanError);
+      try {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || response.statusText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If JSON parsing fails, try to get text
+        const errorText = await response.text();
+        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+        throw new Error(cleanError);
+      }
     }
     
     return response.json();
