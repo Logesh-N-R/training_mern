@@ -750,14 +750,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
 
-  // Serve static files from client/dist
-  app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
+  // Serve static files from dist/public
+  app.use(express.static(path.join(import.meta.dirname, '../dist/public')));
 
   // Handle client-side routing - serve index.html for all non-API routes
   app.get('*', (req, res) => {
     // Only serve index.html for non-API routes
     if (!req.path.startsWith('/api/')) {
-      res.sendFile(path.join(import.meta.dirname, '../client/dist/index.html'));
+      res.sendFile(path.join(import.meta.dirname, '../dist/public/index.html'));
     } else {
       res.status(404).json({ message: 'API endpoint not found' });
     }
