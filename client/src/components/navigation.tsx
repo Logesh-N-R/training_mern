@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,10 +46,13 @@ import {
   CheckCircle,
   User,
   ChevronDown,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 export function Navigation() {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
@@ -368,6 +372,14 @@ export function Navigation() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={toggleDarkMode}>
+                  {isDarkMode ? (
+                    <Sun className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Moon className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+                </DropdownMenuItem>
                 <Dialog
                   open={isResetPasswordOpen}
                   onOpenChange={setIsResetPasswordOpen}
@@ -544,6 +556,22 @@ export function Navigation() {
                   <div className="px-3 py-2 text-xs text-slate-600">
                     User ID: {user.id}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-slate-600 hover:text-slate-900"
+                    onClick={() => {
+                      toggleDarkMode();
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    {isDarkMode ? (
+                      <Sun className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Moon className="w-4 h-4 mr-2" />
+                    )}
+                    {isDarkMode ? "Light Mode" : "Dark Mode"}
+                  </Button>
                   <Dialog
                     open={isResetPasswordOpen}
                     onOpenChange={setIsResetPasswordOpen}
