@@ -190,10 +190,12 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
     return user ? user.name : 'Unknown User';
   };
 
-  const filteredSubmissions = submissions.filter((submission: Submission) => {
+  const completedSubmissions = submissions.filter((submission: Submission) => submission.status === 'completed');
+
+  const filteredSubmissions = completedSubmissions.filter((submission: Submission) => {
     // Only show submitted or evaluated submissions for evaluation
     const isEvaluable = submission.status === 'submitted' || submission.status === 'evaluated' || submission.evaluation;
-    
+
     const userName = getUserName(submission.userId).toLowerCase();
     const matchesSearch = userName.includes(searchTerm.toLowerCase()) ||
                          submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase());
@@ -236,6 +238,12 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       const fileName = `test_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
     };
+
+    const pendingEvaluation = completedSubmissions.filter((s: Submission) => !s.evaluation);
+  const totalEvaluated = completedSubmissions.filter((s: Submission) => s.evaluation);
+  const averageScore = totalEvaluated.length > 0 
+    ? Math.round(totalEvaluated.reduce((sum: number, s: Submission) => sum + (s.evaluation?.percentage || 0), 0) / totalEvaluated.length)
+    : 0;
 
   return (
     <Card>
@@ -294,11 +302,11 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       </CardHeader>
       <CardContent>
         {loadingSubmissions ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-slate-600">Loading submissions...</p>
-          </div>
-        ) : filteredSubmissions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-slate-600">Loading submissions...</p>
+                  </div>
+                ) : completedSubmissions.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600">No submissions found</p>
@@ -321,7 +329,8 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {filteredSubmissions.map((submission: Submission) => (
+                          {completedSubmissions.map((submission: Submission) => {
+                    return (
                     <tr key={submission.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -394,14 +403,15 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-              {filteredSubmissions.map((submission: Submission) => (
+              {completedSubmissions.map((submission: Submission) => (
                 <Card key={submission.id} className="overflow-hidden">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-4">

@@ -89,6 +89,48 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
     }));
   };
 
+  const handleSaveAsDraft = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const questionAnswers = questionSet.questions.map((question, index) => ({
+        question: question.question,
+        type: question.type,
+        topic: question.topic,
+        answer: answers[index] || '',
+        options: question.options || []
+      }));
+
+      const submission = {
+        questionSetId: questionSet._id,
+        date: questionSet.date,
+        sessionTitle: questionSet.sessionTitle,
+        questionAnswers,
+        overallUnderstanding,
+        status: 'In Progress',
+        remarks
+      };
+
+      await onSubmit(submission);
+
+      toast({
+        title: "Success",
+        description: "Your test has been saved as draft!",
+      });
+    } catch (error) {
+      console.error('Save draft error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save test. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (isAutoSubmit = false) => {
     if (isSubmitting) return;
 
@@ -109,7 +151,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         sessionTitle: questionSet.sessionTitle,
         questionAnswers,
         overallUnderstanding,
-        status: isAutoSubmit ? 'Completed' : status,
+        status: isAutoSubmit ? 'Completed' : 'Completed',
         remarks
       };
 
@@ -356,7 +398,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
+      {/* Save and Submit Buttons */}
       <Card>
         <CardContent className="pt-6">
           {timeRemaining < 300 && !isCompleted && (
@@ -368,24 +410,46 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
             </Alert>
           )}
 
-          <Button 
-            onClick={() => handleSubmit()} 
-            disabled={isSubmitting || isCompleted || !overallUnderstanding}
-            className="w-full"
-            size="lg"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                {isCompleted ? 'Test Completed' : 'Submit Test'}
-              </>
-            )}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button 
+              onClick={() => handleSaveAsDraft()} 
+              disabled={isSubmitting || isCompleted}
+              variant="outline"
+              className="flex-1"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600 mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Draft
+                </>
+              )}
+            </Button>
+
+            <Button 
+              onClick={() => handleSubmit()} 
+              disabled={isSubmitting || isCompleted || !overallUnderstanding}
+              className="flex-1"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  {isCompleted ? 'Test Completed' : 'Submit Test'}
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
