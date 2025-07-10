@@ -10,20 +10,26 @@ export class ApiService {
     const response = await fetch(url, {
       headers: this.getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       try {
+        // Clone the response to read it multiple times if needed
+        const responseClone = response.clone();
         const errorData = await response.json();
         const errorMessage = errorData.message || response.statusText;
         throw new Error(errorMessage);
       } catch (parseError) {
-        // If JSON parsing fails, try to get text
-        const errorText = await response.text();
-        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
-        throw new Error(cleanError);
+        // If JSON parsing fails, try to get text from the cloned response
+        try {
+          const errorText = await response.clone().text();
+          const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+          throw new Error(cleanError);
+        } catch (textError) {
+          throw new Error(response.statusText);
+        }
       }
     }
-    
+
     return response.json();
   }
 
@@ -36,20 +42,26 @@ export class ApiService {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       try {
+        // Clone the response to read it multiple times if needed
+        const responseClone = response.clone();
         const errorData = await response.json();
         const errorMessage = errorData.message || response.statusText;
         throw new Error(errorMessage);
       } catch (parseError) {
-        // If JSON parsing fails, try to get text
-        const errorText = await response.text();
-        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
-        throw new Error(cleanError);
+        // If JSON parsing fails, try to get text from the cloned response
+        try {
+          const errorText = await response.clone().text();
+          const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+          throw new Error(cleanError);
+        } catch (textError) {
+          throw new Error(response.statusText);
+        }
       }
     }
-    
+
     return response.json();
   }
 
@@ -62,20 +74,26 @@ export class ApiService {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       try {
+        // Clone the response to read it multiple times if needed
+        const responseClone = response.clone();
         const errorData = await response.json();
         const errorMessage = errorData.message || response.statusText;
         throw new Error(errorMessage);
       } catch (parseError) {
-        // If JSON parsing fails, try to get text
-        const errorText = await response.text();
-        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
-        throw new Error(cleanError);
+        // If JSON parsing fails, try to get text from the cloned response
+        try {
+          const errorText = await response.clone().text();
+          const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+          throw new Error(cleanError);
+        } catch (textError) {
+          throw new Error(response.statusText);
+        }
       }
     }
-    
+
     return response.json();
   }
 
@@ -84,20 +102,26 @@ export class ApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       try {
+        // Clone the response to read it multiple times if needed
+        const responseClone = response.clone();
         const errorData = await response.json();
         const errorMessage = errorData.message || response.statusText;
         throw new Error(errorMessage);
       } catch (parseError) {
-        // If JSON parsing fails, try to get text
-        const errorText = await response.text();
-        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
-        throw new Error(cleanError);
+        // If JSON parsing fails, try to get text from the cloned response
+        try {
+          const errorText = await response.clone().text();
+          const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+          throw new Error(cleanError);
+        } catch (textError) {
+          throw new Error(response.statusText);
+        }
       }
     }
-    
+
     return response.json();
   }
 
@@ -107,20 +131,26 @@ export class ApiService {
       headers: this.getAuthHeaders(),
       body: formData,
     });
-    
+
     if (!response.ok) {
       try {
+        // Clone the response to read it multiple times if needed
+        const responseClone = response.clone();
         const errorData = await response.json();
         const errorMessage = errorData.message || response.statusText;
         throw new Error(errorMessage);
       } catch (parseError) {
-        // If JSON parsing fails, try to get text
-        const errorText = await response.text();
-        const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
-        throw new Error(cleanError);
+        // If JSON parsing fails, try to get text from the cloned response
+        try {
+          const errorText = await response.clone().text();
+          const cleanError = errorText.replace(/^\d+:\s*/, '') || response.statusText;
+          throw new Error(cleanError);
+        } catch (textError) {
+          throw new Error(response.statusText);
+        }
       }
     }
-    
+
     return response.json();
   }
 }
