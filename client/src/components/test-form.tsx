@@ -144,19 +144,21 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
 
   const renderQuestion = (question: Question, index: number) => {
     const currentAnswer = answers[index] || '';
+    const canEdit = status !== 'Completed';
 
     switch (question.type) {
       case 'multiple-choice':
         return (
           <RadioGroup
             value={currentAnswer}
-            onValueChange={(value) => handleAnswerChange(index, value)}
+            onValueChange={(value) => canEdit && handleAnswerChange(index, value)}
             className="space-y-2"
+            disabled={!canEdit}
           >
             {question.options?.map((option, optionIndex) => (
               <div key={optionIndex} className="flex items-center space-x-2">
-                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
-                <Label htmlFor={`q${index}-${optionIndex}`} className="flex-1 cursor-pointer">
+                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} disabled={!canEdit} />
+                <Label htmlFor={`q${index}-${optionIndex}`} className={`flex-1 ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                   {option}
                 </Label>
               </div>
@@ -168,13 +170,14 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         return (
           <RadioGroup
             value={currentAnswer}
-            onValueChange={(value) => handleAnswerChange(index, value)}
+            onValueChange={(value) => canEdit && handleAnswerChange(index, value)}
             className="space-y-2"
+            disabled={!canEdit}
           >
             {question.options?.map((option, optionIndex) => (
               <div key={optionIndex} className="flex items-center space-x-2">
-                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} />
-                <Label htmlFor={`q${index}-${optionIndex}`} className="flex-1 cursor-pointer">
+                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} disabled={!canEdit} />
+                <Label htmlFor={`q${index}-${optionIndex}`} className={`flex-1 ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
                   {option}
                 </Label>
               </div>
@@ -186,16 +189,17 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         return (
           <RadioGroup
             value={currentAnswer}
-            onValueChange={(value) => handleAnswerChange(index, value)}
+            onValueChange={(value) => canEdit && handleAnswerChange(index, value)}
             className="space-y-2"
+            disabled={!canEdit}
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="True" id={`q${index}-true`} />
-              <Label htmlFor={`q${index}-true`} className="cursor-pointer">True</Label>
+              <RadioGroupItem value="True" id={`q${index}-true`} disabled={!canEdit} />
+              <Label htmlFor={`q${index}-true`} className={`${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>True</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="False" id={`q${index}-false`} />
-              <Label htmlFor={`q${index}-false`} className="cursor-pointer">False</Label>
+              <RadioGroupItem value="False" id={`q${index}-false`} disabled={!canEdit} />
+              <Label htmlFor={`q${index}-false`} className={`${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>False</Label>
             </div>
           </RadioGroup>
         );
@@ -208,6 +212,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
             onChange={(e) => handleAnswerChange(index, e.target.value)}
             placeholder="Enter your answer..."
             className="min-h-[100px] resize-none"
+            disabled={!canEdit}
           />
         );
 
@@ -217,6 +222,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
             value={currentAnswer}
             onChange={(e) => handleAnswerChange(index, e.target.value)}
             placeholder="Enter your answer..."
+            disabled={!canEdit}
           />
         );
     }
@@ -308,7 +314,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="understanding">Rate your overall understanding of today's session</Label>
-            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding}>
+            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding} disabled={isCompleted}>
               <SelectTrigger>
                 <SelectValue placeholder="Select understanding level" />
               </SelectTrigger>
@@ -344,6 +350,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Any additional comments or feedback..."
               className="min-h-[100px] resize-none"
+              disabled={isCompleted}
             />
           </div>
         </CardContent>
