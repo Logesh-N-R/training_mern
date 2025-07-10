@@ -125,8 +125,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       const result = await onSubmit(submission);
       
       // Update submission ID if this is a new submission
-      if (result && result.id && !submissionId) {
-        setSubmissionId(result.id);
+      if (result && (result.id || result._id) && !submissionId) {
+        setSubmissionId(result.id || result._id);
       }
 
       toast({

@@ -344,6 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("Submission request body:", req.body);
         const {
+          id,
           questionSetId,
           date,
           sessionTitle,
@@ -358,11 +359,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           !questionSetId ||
           !date ||
           !sessionTitle ||
-          !Array.isArray(questionAnswers) ||
-          !overallUnderstanding ||
-          !status
+          !Array.isArray(questionAnswers)
         ) {
           return res.status(400).json({ message: "Invalid request data" });
+        }
+
+        // If submission ID is provided, update existing submission
+        if (id) {
+          const updatedSubmission = await storage.updateSubmission(id, {
+            questionSetId: new ObjectId(questionSetId),
+            sessionTitle,
+            questionAnswers,
+            overallUnderstanding,
+            status,
+            remarks,
+            submittedAt: status === 'submitted' ? new Date() : undefined,
+          });
+
+          if (!updatedSubmission) {
+            return res.status(404).json({ message: "Submission not found" });
+          }
+
+          return res.status(200).json(updatedSubmission);
         }
 
         // Check if user has already submitted for this date
@@ -373,14 +391,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (existingSubmission) {
           // If submission exists and has been evaluated, don't allow resubmission
-          if (existingSubmission.evaluation) {
+          if (existingSubmission.evaluation && status === 'submitted') {
             return res.status(400).json({
               message:
                 "Test has already been evaluated and cannot be resubmitted",
             });
           }
 
-          // If submission exists but not evaluated, update it instead of creating new one
+          // Update existing submission
           const updatedSubmission = await storage.updateSubmission(
             existingSubmission._id.toString(),
             {
@@ -390,7 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               overallUnderstanding,
               status,
               remarks,
-              submittedAt: new Date(),
+              submittedAt: status === 'submitted' ? new Date() : undefined,
             },
           );
 
@@ -403,9 +421,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date,
           sessionTitle,
           questionAnswers,
-          overallUnderstanding,
+          overallUnderstanding: overallUnderstanding || '',
           status,
-          remarks,
+          remarks: remarks || '',
           userId: new ObjectId(req.user!.id),
         });
 
