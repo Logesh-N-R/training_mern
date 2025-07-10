@@ -29,22 +29,22 @@
   --background: hsl(224, 71%, 4%);
   --foreground: hsl(213, 31%, 91%);
   --muted: hsl(223, 47%, 11%);
-  --muted-foreground: hsl(215.4, 16.3%, 56.9%);
+  --muted-foreground: hsl(215.4, 16.3%, 66.9%);
   --popover: hsl(224, 71%, 8%);
   --popover-foreground: hsl(213, 31%, 91%);
   --card: hsl(224, 71%, 8%);
   --card-foreground: hsl(213, 31%, 91%);
   --border: hsl(216, 34%, 17%);
   --input: hsl(216, 34%, 17%);
-  --primary: hsl(210, 40%, 98%);
-  --primary-foreground: hsl(222.2, 84%, 4.9%);
-  --secondary: hsl(222.2, 84%, 4.9%);
+  --primary: hsl(217, 91%, 59%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(216, 34%, 17%);
   --secondary-foreground: hsl(210, 40%, 98%);
-  --accent: hsl(216, 34%, 17%);
+  --accent: hsl(216, 34%, 20%);
   --accent-foreground: hsl(210, 40%, 98%);
-  --destructive: hsl(0, 63%, 31%);
+  --destructive: hsl(0, 63%, 45%);
   --destructive-foreground: hsl(210, 40%, 98%);
-  --ring: hsl(216, 34%, 17%);
+  --ring: hsl(217, 91%, 59%);
 }
 
 @layer base {
@@ -193,19 +193,35 @@
   color: hsl(145, 70%, 85%) !important;
 }
 
-/* Hover states for dark mode */
+/* Hover states for dark mode with better contrast */
 .dark [data-state="open"] {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  background-color: hsl(216, 34%, 25%) !important;
+  color: hsl(210, 40%, 98%) !important;
 }
 
 .dark .hover\:bg-accent:hover {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  background-color: hsl(216, 34%, 25%) !important;
+  color: hsl(210, 40%, 98%) !important;
 }
 
 .dark .hover\:text-accent-foreground:hover {
-  color: hsl(var(--accent-foreground)) !important;
+  color: hsl(210, 40%, 98%) !important;
+}
+
+/* Button hover states for dark mode */
+.dark button:hover {
+  background-color: hsl(217, 91%, 70%) !important;
+  color: hsl(222, 47%, 11%) !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: hsl(216, 34%, 20%) !important;
+  color: hsl(210, 40%, 98%) !important;
+}
+
+.dark .hover\:bg-slate-100:hover {
+  background-color: hsl(216, 34%, 20%) !important;
+  color: hsl(210, 40%, 98%) !important;
 }
 
 /* Dropdown menu items for dark mode */
@@ -214,8 +230,19 @@
 }
 
 .dark [role="menuitem"]:hover {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
+  background-color: hsl(216, 34%, 25%) !important;
+  color: hsl(210, 40%, 98%) !important;
+}
+
+/* Table row hover for dark mode */
+.dark .hover\:bg-muted\/50:hover {
+  background-color: hsl(216, 34%, 15%) !important;
+  color: hsl(210, 40%, 98%) !important;
+}
+
+/* Card hover states for dark mode */
+.dark .hover\:shadow-md:hover {
+  background-color: hsl(224, 71%, 12%) !important;
 }
 
 /* Force text visibility in dark mode */
@@ -225,6 +252,15 @@
 
 .dark .text-xs {
   color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Ensure all interactive elements have proper contrast */
+.dark a:hover {
+  color: hsl(217, 91%, 70%) !important;
+}
+
+.dark .cursor-pointer:hover {
+  background-color: hsl(216, 34%, 20%) !important;
 }
 
 /* Prevent horizontal scroll on mobile */
