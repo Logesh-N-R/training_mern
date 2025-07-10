@@ -127,7 +127,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
       console.error('Submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to submit test. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit test. Please try again.",
         variant: "destructive",
       });
     } finally {

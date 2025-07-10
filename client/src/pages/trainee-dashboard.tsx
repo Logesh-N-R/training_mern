@@ -158,6 +158,12 @@ export default function TraineeDashboard() {
                           queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
                         } catch (error) {
                           console.error('Failed to submit test:', error);
+                          // Show the actual error message from the server
+                          toast({
+                            title: "Error",
+                            description: error instanceof Error ? error.message : "Failed to submit test. Please try again.",
+                            variant: "destructive",
+                          });
                           throw error;
                         }
                       }}
