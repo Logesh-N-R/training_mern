@@ -98,7 +98,7 @@ export function QuestionUploader() {
       }
       formData.append('prompt', data.prompt);
       formData.append('questionTypes', JSON.stringify(data.questionTypes));
-      return ApiService.post('/api/ai/generate-questions', formData);
+      return ApiService.postFormData('/api/ai/generate-questions', formData);
     },
     onSuccess: (generatedQuestions: any) => {
       toast({

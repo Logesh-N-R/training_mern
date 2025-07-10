@@ -13,7 +13,9 @@ export class ApiService {
     
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(error || response.statusText);
+      // Extract just the error message without status code
+      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
+      throw new Error(cleanError);
     }
     
     return response.json();
@@ -31,7 +33,9 @@ export class ApiService {
     
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(error || response.statusText);
+      // Extract just the error message without status code
+      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
+      throw new Error(cleanError);
     }
     
     return response.json();
@@ -49,7 +53,9 @@ export class ApiService {
     
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(error || response.statusText);
+      // Extract just the error message without status code
+      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
+      throw new Error(cleanError);
     }
     
     return response.json();
@@ -63,7 +69,26 @@ export class ApiService {
     
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(error || response.statusText);
+      // Extract just the error message without status code
+      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
+      throw new Error(cleanError);
+    }
+    
+    return response.json();
+  }
+
+  static async postFormData(url: string, formData: FormData) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      // Extract just the error message without status code
+      const cleanError = error.replace(/^\d+:\s*/, '') || response.statusText;
+      throw new Error(cleanError);
     }
     
     return response.json();
