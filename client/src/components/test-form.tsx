@@ -32,9 +32,10 @@ interface TestFormProps {
   questionSet: QuestionSet;
   onSubmit: (submission: any) => void;
   existingSubmission?: any;
+  viewOnly?: boolean;
 }
 
-export function TestForm({ questionSet, onSubmit, existingSubmission }: TestFormProps) {
+export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly = false }: TestFormProps) {
   // Early return if questionSet is not provided
   if (!questionSet || !questionSet.questions) {
     return <div>Loading...</div>;
@@ -48,6 +49,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
   const [isCompleted, setIsCompleted] = useState(false);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
 
   const handleAutoSubmit = useCallback(() => {
     setStatus('Completed');
@@ -66,21 +68,27 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
       setOverallUnderstanding(existingSubmission.overallUnderstanding || '');
       setStatus(existingSubmission.status || 'In Progress');
       setRemarks(existingSubmission.remarks || '');
-      setIsCompleted(existingSubmission.status === 'Completed');
+      setSubmissionId(existingSubmission.id || existingSubmission._id);
+      
+      // Check if submission is completed or submitted
+      const isSubmissionCompleted = existingSubmission.status === 'submitted' || 
+                                  existingSubmission.status === 'Completed' ||
+                                  existingSubmission.evaluation;
+      setIsCompleted(isSubmissionCompleted);
     }
   }, [existingSubmission]);
 
-  // Timer effect
+  // Timer effect (disabled in view-only mode)
   useEffect(() => {
-    if (timeRemaining > 0 && !isCompleted) {
+    if (!viewOnly && timeRemaining > 0 && !isCompleted) {
       const timer = setTimeout(() => {
         setTimeRemaining(timeRemaining - 1);
       }, 1000);
       return () => clearTimeout(timer);
-    } else if (timeRemaining === 0 && !isCompleted) {
+    } else if (!viewOnly && timeRemaining === 0 && !isCompleted) {
       handleAutoSubmit();
     }
-  }, [timeRemaining, isCompleted, handleAutoSubmit]);
+  }, [timeRemaining, isCompleted, handleAutoSubmit, viewOnly]);
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     setAnswers(prev => ({
@@ -90,7 +98,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
   };
 
   const handleSaveAsDraft = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || viewOnly) return;
 
     setIsSubmitting(true);
 
@@ -104,16 +112,22 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
       }));
 
       const submission = {
+        id: submissionId,
         questionSetId: questionSet._id,
         date: questionSet.date,
         sessionTitle: questionSet.sessionTitle,
         questionAnswers,
         overallUnderstanding,
-        status: 'In Progress',
+        status: 'saved',
         remarks
       };
 
-      await onSubmit(submission);
+      const result = await onSubmit(submission);
+      
+      // Update submission ID if this is a new submission
+      if (result && result.id && !submissionId) {
+        setSubmissionId(result.id);
+      }
 
       toast({
         title: "Success",
@@ -132,7 +146,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
   };
 
   const handleSubmit = async (isAutoSubmit = false) => {
-    if (isSubmitting) return;
+    if (isSubmitting || viewOnly) return;
 
     setIsSubmitting(true);
 
@@ -146,12 +160,13 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
       }));
 
       const submission = {
+        id: submissionId,
         questionSetId: questionSet._id,
         date: questionSet.date,
         sessionTitle: questionSet.sessionTitle,
         questionAnswers,
         overallUnderstanding,
-        status: isAutoSubmit ? 'Completed' : 'Completed',
+        status: 'submitted',
         remarks
       };
 
@@ -165,6 +180,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
       }
 
       setIsCompleted(true);
+      setStatus('submitted');
     } catch (error) {
       console.error('Submission error:', error);
       toast({
@@ -186,7 +202,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
 
   const renderQuestion = (question: Question, index: number) => {
     const currentAnswer = answers[index] || '';
-    const canEdit = status !== 'Completed';
+    const canEdit = !viewOnly && status !== 'submitted' && status !== 'Completed' && !existingSubmission?.evaluation;
 
     switch (question.type) {
       case 'multiple-choice':
@@ -356,7 +372,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="understanding">Rate your overall understanding of today's session</Label>
-            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding} disabled={isCompleted}>
+            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding} disabled={viewOnly || isCompleted}>
               <SelectTrigger>
                 <SelectValue placeholder="Select understanding level" />
               </SelectTrigger>
@@ -372,12 +388,13 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
 
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus} disabled={isCompleted}>
+            <Select value={status} onValueChange={setStatus} disabled={viewOnly || isCompleted}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="saved">Saved</SelectItem>
                 <SelectItem value="In Progress">In Progress</SelectItem>
                 <SelectItem value="Not Started">Not Started</SelectItem>
               </SelectContent>
@@ -392,66 +409,82 @@ export function TestForm({ questionSet, onSubmit, existingSubmission }: TestForm
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Any additional comments or feedback..."
               className="min-h-[100px] resize-none"
-              disabled={isCompleted}
+              disabled={viewOnly || isCompleted}
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Save and Submit Buttons */}
-      <Card>
-        <CardContent className="pt-6">
-          {timeRemaining < 300 && !isCompleted && (
-            <Alert className="mb-4">
-              <AlertCircle className="h-4 w-4" />
+      {!viewOnly && (
+        <Card>
+          <CardContent className="pt-6">
+            {timeRemaining < 300 && !isCompleted && (
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Warning: Less than 5 minutes remaining! Your test will auto-submit when time runs out.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                onClick={() => handleSaveAsDraft()} 
+                disabled={isSubmitting || isCompleted}
+                variant="outline"
+                className="flex-1"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600 mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Save Draft
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                onClick={() => handleSubmit()} 
+                disabled={isSubmitting || isCompleted || !overallUnderstanding}
+                className="flex-1"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    {isCompleted ? 'Test Submitted' : 'Submit Test'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Mode Indicator */}
+      {viewOnly && (
+        <Card>
+          <CardContent className="pt-6">
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                Warning: Less than 5 minutes remaining! Your test will auto-submit when time runs out.
+                This is a read-only view of your submitted test. You cannot make changes.
               </AlertDescription>
             </Alert>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button 
-              onClick={() => handleSaveAsDraft()} 
-              disabled={isSubmitting || isCompleted}
-              variant="outline"
-              className="flex-1"
-              size="lg"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600 mr-2" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Save Draft
-                </>
-              )}
-            </Button>
-
-            <Button 
-              onClick={() => handleSubmit()} 
-              disabled={isSubmitting || isCompleted || !overallUnderstanding}
-              className="flex-1"
-              size="lg"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  {isCompleted ? 'Test Completed' : 'Submit Test'}
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

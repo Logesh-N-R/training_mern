@@ -56,6 +56,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
   const queryClient = useQueryClient();
   const [selectedTest, setSelectedTest] = useState<TestStatus | null>(null);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
     queryKey: ['/api/questions'],
@@ -84,6 +85,9 @@ export function TestManagement({ userRole }: TestManagementProps) {
       } else if (submission.status === 'submitted') {
         status = 'submitted';
         canEdit = false;
+      } else if (submission.status === 'saved') {
+        status = 'saved';
+        canEdit = true;
       } else {
         status = 'saved';
         canEdit = true;
@@ -130,12 +134,20 @@ export function TestManagement({ userRole }: TestManagementProps) {
 
   const handleStartTest = (testStatus: TestStatus) => {
     setSelectedTest(testStatus);
+    setIsViewMode(false);
+    setIsTestModalOpen(true);
+  };
+
+  const handleViewTest = (testStatus: TestStatus) => {
+    setSelectedTest(testStatus);
+    setIsViewMode(true);
     setIsTestModalOpen(true);
   };
 
   const handleTestComplete = () => {
     setIsTestModalOpen(false);
     setSelectedTest(null);
+    setIsViewMode(false);
     queryClient.invalidateQueries({ queryKey: ['/api/submissions/my'] });
   };
 
@@ -233,30 +245,41 @@ export function TestManagement({ userRole }: TestManagementProps) {
                         <td className="px-4 py-3">
                           <div className="flex space-x-2">
                             {userRole === 'trainee' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-primary hover:text-blue-700"
-                                onClick={() => handleStartTest(testStatus)}
-                                disabled={testStatus.status === 'submitted' && !testStatus.canEdit}
-                              >
+                              <>
                                 {testStatus.status === 'not_started' ? (
-                                  <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-primary hover:text-blue-700"
+                                    onClick={() => handleStartTest(testStatus)}
+                                  >
                                     <Play className="w-4 h-4 mr-1" />
                                     Start
-                                  </>
+                                  </Button>
                                 ) : testStatus.canEdit ? (
-                                  <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-primary hover:text-blue-700"
+                                    onClick={() => handleStartTest(testStatus)}
+                                  >
                                     <Edit className="w-4 h-4 mr-1" />
                                     Continue
-                                  </>
-                                ) : (
-                                  <>
+                                  </Button>
+                                ) : null}
+                                
+                                {testStatus.submission && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-slate-600 hover:text-slate-800"
+                                    onClick={() => handleViewTest(testStatus)}
+                                  >
                                     <FileText className="w-4 h-4 mr-1" />
                                     View
-                                  </>
+                                  </Button>
                                 )}
-                              </Button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -328,29 +351,37 @@ export function TestManagement({ userRole }: TestManagementProps) {
                       )}
 
                       {userRole === 'trainee' && (
-                        <Button
-                          className="w-full"
-                          variant={testStatus.status === 'not_started' ? 'default' : 'outline'}
-                          onClick={() => handleStartTest(testStatus)}
-                          disabled={testStatus.status === 'submitted' && !testStatus.canEdit}
-                        >
+                        <div className="space-y-2">
                           {testStatus.status === 'not_started' ? (
-                            <>
+                            <Button
+                              className="w-full"
+                              onClick={() => handleStartTest(testStatus)}
+                            >
                               <Play className="w-4 h-4 mr-2" />
                               Start Test
-                            </>
+                            </Button>
                           ) : testStatus.canEdit ? (
-                            <>
+                            <Button
+                              className="w-full"
+                              variant="outline"
+                              onClick={() => handleStartTest(testStatus)}
+                            >
                               <Edit className="w-4 h-4 mr-2" />
                               Continue Test
-                            </>
-                          ) : (
-                            <>
+                            </Button>
+                          ) : null}
+                          
+                          {testStatus.submission && (
+                            <Button
+                              className="w-full"
+                              variant="outline"
+                              onClick={() => handleViewTest(testStatus)}
+                            >
                               <FileText className="w-4 h-4 mr-2" />
                               View Test
-                            </>
+                            </Button>
                           )}
-                        </Button>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
@@ -381,6 +412,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
               }}
               onSubmit={handleTestComplete}
               existingSubmission={selectedTest.submission}
+              viewOnly={isViewMode}
             />
           )}
         </DialogContent>

@@ -192,17 +192,29 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
 
   const completedSubmissions = submissions.filter((submission: Submission) => submission.status === 'completed');
 
-  const filteredSubmissions = completedSubmissions.filter((submission: Submission) => {
-    // Only show submitted or evaluated submissions for evaluation
-    const isEvaluable = submission.status === 'submitted' || submission.status === 'evaluated' || submission.evaluation;
+  const filteredSubmissions = submissions.filter((submission: Submission) => {
+    // Only show submitted tests for evaluation (not saved drafts)
+    const isSubmittedOrEvaluated = submission.status === 'submitted' || submission.evaluation;
 
-    const userName = getUserName(submission.userId).toLowerCase();
-    const matchesSearch = userName.includes(searchTerm.toLowerCase()) ||
-                         submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || submission.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesDate = dateFilter === 'all' || submission.date === dateFilter;
+    const matchesSearch = searchTerm === '' || 
+      submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (submission.userId && getUserName(submission.userId).toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return isEvaluable && matchesSearch && matchesStatus && matchesDate;
+    const matchesStatus = statusFilter === 'all' || 
+      submission.status.toLowerCase() === statusFilter.toLowerCase();
+
+    const matchesDate = dateFilter === 'all' || (() => {
+      const submissionDate = new Date(submission.submittedAt);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - submissionDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      return dateFilter === 'today' ? diffDays === 1 :
+             dateFilter === 'week' ? diffDays <= 7 :
+             dateFilter === 'month' ? diffDays <= 30 : true;
+    })();
+
+    return isSubmittedOrEvaluated && matchesSearch && matchesStatus && matchesDate;
   });
 
   const uniqueDates = [...new Set(submissions.map((s: Submission) => s.date))].sort().reverse();
