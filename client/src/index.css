@@ -140,6 +140,7 @@
   border-color: hsl(var(--border));
 }
 
+/* Text color overrides for dark mode */
 .dark .text-slate-600,
 .dark .text-slate-700,
 .dark .text-gray-600,
@@ -153,6 +154,11 @@
   color: hsl(var(--foreground)) !important;
 }
 
+.dark .text-white {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Background color overrides for dark mode */
 .dark .bg-white {
   background-color: hsl(var(--card)) !important;
 }
@@ -160,6 +166,65 @@
 .dark .bg-slate-50,
 .dark .bg-gray-50 {
   background-color: hsl(var(--background)) !important;
+}
+
+/* Role badge colors for dark mode */
+.dark .bg-purple-100 {
+  background-color: hsl(280, 40%, 25%) !important;
+}
+
+.dark .text-purple-800 {
+  color: hsl(280, 70%, 85%) !important;
+}
+
+.dark .bg-blue-100 {
+  background-color: hsl(215, 40%, 25%) !important;
+}
+
+.dark .text-blue-800 {
+  color: hsl(215, 70%, 85%) !important;
+}
+
+.dark .bg-green-100 {
+  background-color: hsl(145, 40%, 25%) !important;
+}
+
+.dark .text-green-800 {
+  color: hsl(145, 70%, 85%) !important;
+}
+
+/* Hover states for dark mode */
+.dark [data-state="open"] {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .hover\:bg-accent:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .hover\:text-accent-foreground:hover {
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Dropdown menu items for dark mode */
+.dark [role="menuitem"] {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark [role="menuitem"]:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Force text visibility in dark mode */
+.dark .text-sm {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .text-xs {
+  color: hsl(var(--muted-foreground)) !important;
 }
 
 /* Prevent horizontal scroll on mobile */
