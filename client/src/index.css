@@ -168,6 +168,28 @@
   background-color: hsl(var(--background)) !important;
 }
 
+/* Card differentiation for admin modules in dark mode */
+.dark .bg-white {
+  background-color: hsl(224, 71%, 10%) !important;
+}
+
+/* Admin dashboard specific card styling */
+.dark [class*="Card"] {
+  background-color: hsl(224, 71%, 10%) !important;
+  border: 1px solid hsl(216, 34%, 20%) !important;
+}
+
+/* Table headers and special sections */
+.dark .bg-slate-50 {
+  background-color: hsl(224, 71%, 12%) !important;
+}
+
+/* Modal and dialog backgrounds */
+.dark [role="dialog"] {
+  background-color: hsl(224, 71%, 10%) !important;
+  border: 1px solid hsl(216, 34%, 20%) !important;
+}
+
 /* Role badge colors for dark mode */
 .dark .bg-purple-100 {
   background-color: hsl(280, 40%, 25%) !important;
@@ -261,6 +283,27 @@
 
 .dark .cursor-pointer:hover {
   background-color: hsl(216, 34%, 20%) !important;
+}
+
+/* Admin module specific styling for better differentiation */
+.dark #tests .space-y-6 > div,
+.dark #users .space-y-6 > div,
+.dark #upload .space-y-6 > div,
+.dark #qa .space-y-6 > div,
+.dark #others .space-y-6 > div {
+  background-color: hsl(224, 71%, 10%) !important;
+  border: 1px solid hsl(216, 34%, 17%) !important;
+}
+
+/* Statistics cards specific styling */
+.dark .grid > div[class*="Card"] {
+  background-color: hsl(224, 71%, 12%) !important;
+  border: 1px solid hsl(216, 34%, 20%) !important;
+}
+
+/* Navigation section backgrounds */
+.dark .max-w-7xl > div {
+  background-color: hsl(224, 71%, 6%) !important;
 }
 
 /* Prevent horizontal scroll on mobile */
