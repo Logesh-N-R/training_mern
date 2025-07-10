@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 
 export default function TraineeDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -152,8 +153,9 @@ export default function TraineeDashboard() {
                       onSubmit={async (submission) => {
                         try {
                           await ApiService.post('/api/submissions', submission);
-                          // Refetch submissions to update the UI
-                          window.location.reload();
+                          // Refetch submissions to update the UI without page reload
+                          queryClient.invalidateQueries({ queryKey: ['/api/submissions/my'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
                         } catch (error) {
                           console.error('Failed to submit test:', error);
                           throw error;
