@@ -17,12 +17,44 @@ import * as XLSX from 'xlsx';
 import { TestManagement } from '@/components/test-management';
 
 export default function TraineeDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuthRedirect();
+  const [activeSection, setActiveSection] = useState("qa");
+
+  useEffect(() => {
+    const handleSectionChange = (event: CustomEvent) => {
+      setActiveSection(event.detail.section || "dashboard");
+    };
+
+    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
+    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'trainee') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  useAuthRedirect();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("qa");
 
   const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
     queryKey: ['/api/submissions/my'],
@@ -33,24 +65,6 @@ export default function TraineeDashboard() {
     queryKey: ['/api/questions'],
     queryFn: () => ApiService.get('/api/questions'),
   });
-
-  useEffect(() => {
-    const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "test");
-    };
-
-    window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
-    return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
-  }, []);
-
-  // All hooks must be called before any conditional returns
-  if (!user) {
-    return <div>Loading...</div>;
-  }
-
-  if (user.role !== 'trainee') {
-    return null;
-  }
 
   const userSubmissions = submissions.filter((s: Submission) => s.userId === user.id);
   const completedSubmissions = userSubmissions.filter((s: Submission) => s.status === 'Completed');

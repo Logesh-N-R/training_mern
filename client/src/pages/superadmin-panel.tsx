@@ -16,7 +16,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { QAModule } from '@/components/qa-module';
 
 export default function SuperAdminPanel() {
-  const { user } = useAuthRedirect();
+  const { user, isLoading } = useAuthRedirect();
   const [activeSection, setActiveSection] = useState("qa");
 
   useEffect(() => {
@@ -28,8 +28,26 @@ export default function SuperAdminPanel() {
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user || user.role !== 'superadmin') {
-    return <div>Access denied</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
   }
 
   const [systemStats, setSystemStats] = useState({

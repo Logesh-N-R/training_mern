@@ -1,4 +1,3 @@
-
 import { useAuth as useAuthContext } from '@/context/AuthContext';
 import { useLocation } from 'wouter';
 import { useEffect } from 'react';
@@ -8,13 +7,15 @@ export const useAuth = useAuthContext;
 
 export function useAuthRedirect() {
   const { user, isLoading } = useAuthContext();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !user) {
+      // Store the current location to redirect back after login
+      localStorage.setItem('redirectAfterLogin', location);
       navigate('/login');
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, location]);
 
   return { user, isLoading };
 }

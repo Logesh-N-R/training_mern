@@ -19,7 +19,7 @@ import { ApiService } from '@/services/api';
 import { User, Submission } from '@shared/schema';
 
 export default function AdminDashboard() {
-  const { user } = useAuthRedirect();
+  const { user, isLoading } = useAuthRedirect();
   const [selectedTrainee, setSelectedTrainee] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -27,12 +27,34 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "tests");
+      setActiveSection(event.detail.section || "dashboard");
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
     return () => window.removeEventListener('navigation-section-change', handleSectionChange as EventListener);
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   const { data: trainees = [], isLoading: loadingTrainees } = useQuery({
     queryKey: ['/api/trainees'],
@@ -48,10 +70,6 @@ export default function AdminDashboard() {
     queryKey: ['/api/questions'],
     queryFn: () => ApiService.get('/api/questions'),
   });
-
-  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-    return null;
-  }
 
   const handleViewTrainee = (trainee: User) => {
     setSelectedTrainee(trainee);

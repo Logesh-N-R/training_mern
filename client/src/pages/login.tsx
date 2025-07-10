@@ -22,7 +22,7 @@ export default function Login() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     const error = urlParams.get('error');
-    
+
     if (token) {
       localStorage.setItem('token', token);
       window.location.href = '/';
@@ -38,13 +38,22 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await login(email, password);
       toast({
         title: "Success",
         description: "Logged in successfully",
       });
+
+      // Check if there's a redirect URL stored
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        localStorage.removeItem('redirectAfterLogin');
+        window.location.href = redirectUrl;
+      } else {
+        window.location.href = '/';
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -76,7 +85,7 @@ export default function Login() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -88,7 +97,7 @@ export default function Login() {
                 required
               />
             </div>
-            
+
             <Button
               type="submit"
               disabled={isLoading}
@@ -116,7 +125,7 @@ export default function Login() {
               Continue with Google
             </Button>
           </div>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
               Don't have an account?{' '}

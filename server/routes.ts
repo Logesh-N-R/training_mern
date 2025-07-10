@@ -13,6 +13,8 @@ import { loginSchema, registerSchema } from "@shared/schema";
 import { z } from "zod";
 import { googleOAuthClient, GOOGLE_OAUTH_SCOPES } from "./config/google-oauth";
 import { connectToDatabase } from "./db";
+import express from "express";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -742,6 +744,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  });
+
+  // Serve static files from client/dist
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  // Handle client-side routing - serve index.html for all non-API routes
+  app.get('*', (req, res) => {
+    // Only serve index.html for non-API routes
+    if (!req.path.startsWith('/api/')) {
+      res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    } else {
+      res.status(404).json({ message: 'API endpoint not found' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
