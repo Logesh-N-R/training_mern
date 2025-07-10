@@ -14,6 +14,7 @@ import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpe
 import { ApiService } from '@/services/api';
 import { Submission } from '@shared/schema';
 import * as XLSX from 'xlsx';
+import { TestManagement } from '@/components/test-management';
 
 export default function TraineeDashboard() {
   const { user } = useAuth();
@@ -126,53 +127,8 @@ export default function TraineeDashboard() {
         {/* Tests Module */}
         {activeSection === "test" && (
           <div id="test">
-            {loadingQuestionSets ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-slate-600">Loading questions...</p>
-              </div>
-            ) : questionSets.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600">No tests available</p>
-                  <p className="text-sm text-slate-500 mt-2">Check back later for new tests</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {questionSets.map((questionSet: any) => {
-                  const existingSubmission = userSubmissions.find(
-                    (sub: Submission) => sub.questionSetId === questionSet._id
-                  );
-                  
-                  return (
-                    <TestForm
-                      key={questionSet._id}
-                      questionSet={questionSet}
-                      existingSubmission={existingSubmission}
-                      onSubmit={async (submission) => {
-                        try {
-                          await ApiService.post('/api/submissions', submission);
-                          // Refetch submissions to update the UI without page reload
-                          queryClient.invalidateQueries({ queryKey: ['/api/submissions/my'] });
-                          queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
-                        } catch (error) {
-                          console.error('Failed to submit test:', error);
-                          // Show the actual error message from the server
-                          toast({
-                            title: "Error",
-                            description: error instanceof Error ? error.message : "Failed to submit test. Please try again.",
-                            variant: "destructive",
-                          });
-                          throw error;
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
+            {/* Test Management */}
+            <TestManagement userRole={user?.role || 'trainee'} />
           </div>
         )}
 

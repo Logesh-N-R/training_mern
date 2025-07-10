@@ -191,13 +191,16 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
   };
 
   const filteredSubmissions = submissions.filter((submission: Submission) => {
+    // Only show submitted or evaluated submissions for evaluation
+    const isEvaluable = submission.status === 'submitted' || submission.status === 'evaluated' || submission.evaluation;
+    
     const userName = getUserName(submission.userId).toLowerCase();
     const matchesSearch = userName.includes(searchTerm.toLowerCase()) ||
                          submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || submission.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesDate = dateFilter === 'all' || submission.date === dateFilter;
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return isEvaluable && matchesSearch && matchesStatus && matchesDate;
   });
 
   const uniqueDates = [...new Set(submissions.map((s: Submission) => s.date))].sort().reverse();
