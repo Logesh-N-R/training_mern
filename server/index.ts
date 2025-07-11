@@ -88,7 +88,12 @@ async function startServer() {
 
     // Fallback route for SPA - serve index.html for all non-API routes
     app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+      // Only serve index.html for non-API routes
+      if (!req.path.startsWith('/api/')) {
+        res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+      } else {
+        res.status(404).json({ message: 'API endpoint not found' });
+      }
     });
 
     // Start server
