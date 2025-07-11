@@ -186,7 +186,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
 
   const getUserName = (userId: string) => {
     const allUsers = userRole === 'superadmin' ? users : trainees;
-    const user = allUsers.find((u: UserType) => u.id === userId);
+    const user = allUsers.find((u: UserType) => u.id === userId || u._id === userId);
     return user ? user.name : 'Unknown User';
   };
 
@@ -194,7 +194,8 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
     submission.submittedAt || 
     submission.status === 'completed' || 
     submission.status === 'Completed' || 
-    submission.status === 'submitted'
+    submission.status === 'submitted' ||
+    (submission.questionAnswers && submission.questionAnswers.length > 0) // Include any submission with answers
   );
 
   const filteredSubmissions = submissions.filter((submission: Submission) => {
@@ -203,7 +204,8 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
                                   submission.evaluation ||
                                   submission.status === 'submitted' || 
                                   submission.status === 'completed' || 
-                                  submission.status === 'Completed';
+                                  submission.status === 'Completed' ||
+                                  submission.status === 'In Progress'; // Include in progress submissions that might have been submitted
 
     const matchesSearch = searchTerm === '' || 
       submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -213,8 +215,8 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       submission.status.toLowerCase() === statusFilter.toLowerCase();
 
     const matchesDate = dateFilter === 'all' || (() => {
-      if (!submission.submittedAt) return false;
-      const submissionDate = new Date(submission.submittedAt);
+      if (!submission.submittedAt && !submission.date) return dateFilter === 'all';
+      const submissionDate = submission.submittedAt ? new Date(submission.submittedAt) : new Date(submission.date);
       const today = new Date();
       const diffTime = Math.abs(today.getTime() - submissionDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
