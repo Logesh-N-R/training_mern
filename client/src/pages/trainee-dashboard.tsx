@@ -66,7 +66,7 @@ export default function TraineeDashboard() {
     queryFn: () => ApiService.get('/api/questions'),
   });
 
-  const userSubmissions = submissions.filter((s: Submission) => s.userId === user.id);
+  const userSubmissions = submissions.filter((s: Submission) => s.userId === user.id || s.userId === user._id);
   const completedSubmissions = userSubmissions.filter((s: Submission) => s.status === 'Completed');
   const evaluatedSubmissions = userSubmissions.filter((s: Submission) => s.evaluation);
 

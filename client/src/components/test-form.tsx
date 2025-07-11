@@ -69,7 +69,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       setStatus(existingSubmission.status || 'In Progress');
       setRemarks(existingSubmission.remarks || '');
       setSubmissionId(existingSubmission.id || existingSubmission._id);
-      
+
       // Check if submission is completed or submitted
       const isSubmissionCompleted = existingSubmission.status === 'submitted' || 
                                   existingSubmission.status === 'Completed' ||
@@ -123,7 +123,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       };
 
       const result = await onSubmit(submission);
-      
+
       // Update submission ID if this is a new submission
       if (result && (result.id || result._id) && !submissionId) {
         setSubmissionId(result.id || result._id);
