@@ -920,6 +920,7 @@ async function registerRoutes(app2) {
       try {
         console.log("Submission request body:", req.body);
         const {
+          id,
           questionSetId,
           date,
           sessionTitle,
@@ -928,15 +929,30 @@ async function registerRoutes(app2) {
           status,
           remarks
         } = req.body;
-        if (!questionSetId || !date || !sessionTitle || !Array.isArray(questionAnswers) || !overallUnderstanding || !status) {
+        if (!questionSetId || !date || !sessionTitle || !Array.isArray(questionAnswers)) {
           return res.status(400).json({ message: "Invalid request data" });
+        }
+        if (id) {
+          const updatedSubmission = await storage.updateSubmission(id, {
+            questionSetId: new ObjectId2(questionSetId),
+            sessionTitle,
+            questionAnswers,
+            overallUnderstanding,
+            status,
+            remarks,
+            submittedAt: status === "submitted" ? /* @__PURE__ */ new Date() : void 0
+          });
+          if (!updatedSubmission) {
+            return res.status(404).json({ message: "Submission not found" });
+          }
+          return res.status(200).json(updatedSubmission);
         }
         const existingSubmission = await storage.getSubmissionByUserAndDate(
           req.user.id,
           date
         );
         if (existingSubmission) {
-          if (existingSubmission.evaluation) {
+          if (existingSubmission.evaluation && status === "submitted") {
             return res.status(400).json({
               message: "Test has already been evaluated and cannot be resubmitted"
             });
@@ -950,7 +966,7 @@ async function registerRoutes(app2) {
               overallUnderstanding,
               status,
               remarks,
-              submittedAt: /* @__PURE__ */ new Date()
+              submittedAt: status === "submitted" || status === "completed" ? /* @__PURE__ */ new Date() : existingSubmission.submittedAt
             }
           );
           return res.status(200).json(updatedSubmission);
@@ -960,10 +976,11 @@ async function registerRoutes(app2) {
           date,
           sessionTitle,
           questionAnswers,
-          overallUnderstanding,
+          overallUnderstanding: overallUnderstanding || "",
           status,
-          remarks,
-          userId: new ObjectId2(req.user.id)
+          remarks: remarks || "",
+          userId: new ObjectId2(req.user.id),
+          submittedAt: status === "submitted" || status === "completed" ? /* @__PURE__ */ new Date() : void 0
         });
         res.status(201).json(submission);
       } catch (error) {
@@ -1346,6 +1363,7 @@ function serveStatic(app2) {
 
 // server/index.ts
 import cors from "cors";
+import path4 from "path";
 import multer from "multer";
 var app = express3();
 app.use(express3.json());
@@ -1353,7 +1371,7 @@ app.use(express3.urlencoded({ extended: false }));
 app.use(cors());
 app.use((req, res, next) => {
   const start = Date.now();
-  const path4 = req.path;
+  const path5 = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -1362,8 +1380,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path4.startsWith("/api")) {
-      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
+    if (path5.startsWith("/api")) {
+      let logLine = `${req.method} ${path5} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -1408,9 +1426,16 @@ async function startServer() {
     } else {
       serveStatic(app);
     }
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api/")) {
+        res.sendFile(path4.join(__dirname, "../dist/public/index.html"));
+      } else {
+        res.status(404).json({ message: "API endpoint not found" });
+      }
+    });
     const port = 5e3;
     server.listen(port, "0.0.0.0", () => {
-      log(`serving on port ${port}`);
+      log(`Server running on http://0.0.0.0:${port}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
