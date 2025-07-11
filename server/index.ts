@@ -89,7 +89,7 @@ async function startServer() {
     // Start server
     const port = 5000;
     server.listen(port, "0.0.0.0", () => {
-      log(`serving on port ${port}`);
+      log(`Server running on http://0.0.0.0:${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
