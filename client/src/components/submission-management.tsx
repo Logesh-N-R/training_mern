@@ -190,11 +190,18 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
     return user ? user.name : 'Unknown User';
   };
 
-  const completedSubmissions = submissions.filter((submission: Submission) => submission.status === 'completed');
+  const completedSubmissions = submissions.filter((submission: Submission) => 
+    submission.status === 'completed' || 
+    submission.status === 'Completed' || 
+    submission.status === 'submitted'
+  );
 
   const filteredSubmissions = submissions.filter((submission: Submission) => {
-    // Only show submitted tests for evaluation (not saved drafts)
-    const isSubmittedOrEvaluated = submission.status === 'submitted' || submission.evaluation;
+    // Show all submissions that have been submitted (not just saved drafts)
+    const isSubmittedOrEvaluated = submission.status === 'submitted' || 
+                                  submission.status === 'completed' || 
+                                  submission.status === 'Completed' ||
+                                  submission.evaluation;
 
     const matchesSearch = searchTerm === '' || 
       submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||

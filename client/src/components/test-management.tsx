@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -267,7 +266,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
                                     Continue
                                   </Button>
                                 ) : null}
-                                
+
                                 {testStatus.submission && (
                                   <Button
                                     variant="ghost"
@@ -313,7 +312,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
                           </span>
                         </Badge>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-xs font-medium text-slate-700 mb-1">Questions</p>
@@ -370,7 +369,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
                               Continue Test
                             </Button>
                           ) : null}
-                          
+
                           {testStatus.submission && (
                             <Button
                               className="w-full"

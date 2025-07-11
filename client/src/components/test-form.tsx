@@ -167,7 +167,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         questionAnswers,
         overallUnderstanding,
         status: 'submitted',
-        remarks
+        remarks,
+        submittedAt: new Date().toISOString()
       };
 
       await onSubmit(submission);

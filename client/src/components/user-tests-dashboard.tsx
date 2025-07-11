@@ -92,7 +92,7 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
         stats.submissions.push(submission);
         stats.totalTests++;
         
-        if (submission.status === 'Completed') {
+        if (submission.status === 'Completed' || submission.status === 'completed' || submission.status === 'submitted') {
           stats.completedTests++;
         }
         

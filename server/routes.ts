@@ -389,6 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           date,
         );
 
+        // If submission exists and has been evaluated, don't allow resubmission
         if (existingSubmission) {
           // If submission exists and has been evaluated, don't allow resubmission
           if (existingSubmission.evaluation && status === 'submitted') {
@@ -408,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               overallUnderstanding,
               status,
               remarks,
-              submittedAt: status === 'submitted' ? new Date() : undefined,
+              submittedAt: (status === 'submitted' || status === 'completed') ? new Date() : existingSubmission.submittedAt,
             },
           );
 
