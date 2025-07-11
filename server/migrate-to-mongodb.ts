@@ -69,7 +69,9 @@ async function migrateUsers(): Promise<Map<string, ObjectId>> {
       };
       
       const result = await usersCollection.insertOne(newUser);
+      // Map both old ID and email to the new ObjectId
       userIdMap.set(oldUser.id, result.insertedId);
+      userIdMap.set(oldUser.email, result.insertedId);
       console.log(`Migrated user: ${oldUser.email} -> ${result.insertedId}`);
     }
     
@@ -95,6 +97,7 @@ async function migrateQuestions(userIdMap: Map<string, ObjectId>): Promise<Map<s
       const createdByObjectId = userIdMap.get(oldQuestion.createdBy);
       if (!createdByObjectId) {
         console.warn(`Could not find user ID for question creator: ${oldQuestion.createdBy}`);
+        console.log('Available user mappings:', Array.from(userIdMap.keys()));
         continue;
       }
       
@@ -134,11 +137,13 @@ async function migrateSubmissions(userIdMap: Map<string, ObjectId>, questionIdMa
       
       if (!userObjectId) {
         console.warn(`Could not find user ID for submission: ${oldSubmission.userId}`);
+        console.log('Available user mappings:', Array.from(userIdMap.keys()));
         continue;
       }
       
       if (!questionObjectId) {
         console.warn(`Could not find question ID for submission: ${oldSubmission.questionSetId}`);
+        console.log('Available question mappings:', Array.from(questionIdMap.keys()));
         continue;
       }
       
