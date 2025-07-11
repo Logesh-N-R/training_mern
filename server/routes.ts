@@ -426,6 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status,
           remarks: remarks || '',
           userId: new ObjectId(req.user!.id),
+          submittedAt: (status === 'submitted' || status === 'completed') ? new Date() : undefined,
         });
 
         res.status(201).json(submission);

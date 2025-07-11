@@ -191,6 +191,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
   };
 
   const completedSubmissions = submissions.filter((submission: Submission) => 
+    submission.submittedAt || 
     submission.status === 'completed' || 
     submission.status === 'Completed' || 
     submission.status === 'submitted'
@@ -198,10 +199,11 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
 
   const filteredSubmissions = submissions.filter((submission: Submission) => {
     // Show all submissions that have been submitted (not just saved drafts)
-    const isSubmittedOrEvaluated = submission.status === 'submitted' || 
+    const isSubmittedOrEvaluated = submission.submittedAt || 
+                                  submission.evaluation ||
+                                  submission.status === 'submitted' || 
                                   submission.status === 'completed' || 
-                                  submission.status === 'Completed' ||
-                                  submission.evaluation;
+                                  submission.status === 'Completed';
 
     const matchesSearch = searchTerm === '' || 
       submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -211,6 +213,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
       submission.status.toLowerCase() === statusFilter.toLowerCase();
 
     const matchesDate = dateFilter === 'all' || (() => {
+      if (!submission.submittedAt) return false;
       const submissionDate = new Date(submission.submittedAt);
       const today = new Date();
       const diffTime = Math.abs(today.getTime() - submissionDate.getTime());
