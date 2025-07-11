@@ -86,6 +86,11 @@ async function startServer() {
       serveStatic(app);
     }
 
+    // Fallback route for SPA - serve index.html for all non-API routes
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+    });
+
     // Start server
     const port = 5000;
     server.listen(port, "0.0.0.0", () => {
