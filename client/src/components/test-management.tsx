@@ -209,8 +209,8 @@ export function TestManagement({ userRole }: TestManagementProps) {
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-2 text-slate-400" />
                             <span className="text-slate-900">
-                              {formatDate(testStatus.question.date)}
-                            </span>
+                            {testStatus.question?.date ? formatDate(testStatus.question.date) : 'N/A'}
+                          </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -301,7 +301,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
                           <div className="flex items-center mt-1">
                             <Calendar className="w-3 h-3 mr-1 text-slate-400" />
                             <span className="text-sm text-slate-600">
-                              {formatDate(testStatus.question.date)}
+                              {testStatus.question?.date ? formatDate(testStatus.question.date) : 'N/A'}
                             </span>
                           </div>
                         </div>
