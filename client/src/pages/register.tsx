@@ -22,7 +22,7 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await register(name, email, password);
       toast({
@@ -60,7 +60,7 @@ export default function Register() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -72,7 +72,7 @@ export default function Register() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -85,7 +85,7 @@ export default function Register() {
                 minLength={6}
               />
             </div>
-            
+
             <Button
               type="submit"
               disabled={isLoading}
@@ -95,7 +95,7 @@ export default function Register() {
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
               Already have an account?{' '}

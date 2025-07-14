@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRoleRedirect } from '@/hooks/use-auth';
-import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,14 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn } from 'lucide-react';
 
-export default function Login() {
+interface LoginProps {
+  onNavigateToRegister: () => void;
+}
+
+export default function Login({ onNavigateToRegister }: LoginProps) {
   const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  useRoleRedirect();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -25,7 +25,7 @@ export default function Login() {
 
     if (token) {
       localStorage.setItem('token', token);
-      window.location.href = '/';
+      window.location.reload();
     } else if (error) {
       toast({
         title: "Error",
@@ -45,15 +45,6 @@ export default function Login() {
         title: "Success",
         description: "Logged in successfully",
       });
-
-      // Check if there's a redirect URL stored
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      if (redirectUrl) {
-        localStorage.removeItem('redirectAfterLogin');
-        window.location.href = redirectUrl;
-      } else {
-        window.location.href = '/';
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -129,7 +120,12 @@ export default function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
               Don't have an account?{' '}
-              <Link href="/register" className="text-primary hover:text-blue-700 font-medium">Register here</Link>
+              <button 
+                onClick={onNavigateToRegister}
+                className="text-primary hover:text-blue-700 font-medium underline"
+              >
+                Register here
+              </button>
             </p>
           </div>
         </CardContent>
