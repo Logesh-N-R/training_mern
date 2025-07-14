@@ -206,20 +206,31 @@ class Storage {
       });
   }
 
-  async getTestAttemptById(id: string) {
+  // Get test evaluation by attempt ID
+  async getTestEvaluationByAttemptId(attemptId: string): Promise<TestEvaluation | null> {
     const db = await connectToDatabase();
-    return await db.collection('test_attempts')
-      .findOne({ _id: new ObjectId(id) });
+    return db.collection(COLLECTIONS.TEST_EVALUATIONS).findOne({
+      attemptId: new ObjectId(attemptId)
+    }) as Promise<TestEvaluation | null>;
   }
 
-  async updateTestAttempt(id: string, updates: any) {
+  // Update test evaluation
+  async updateTestEvaluation(id: string, updates: Partial<TestEvaluation>): Promise<TestEvaluation | null> {
     const db = await connectToDatabase();
-    const result = await db.collection('test_attempts').findOneAndUpdate(
+    const result = await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $set: { ...updates, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    return result;
+    return result as TestEvaluation | null;
+  }
+
+  // Get test attempt by ID
+  async getTestAttemptById(id: string): Promise<TestAttempt | null> {
+    const db = await connectToDatabase();
+    return db.collection(COLLECTIONS.TEST_ATTEMPTS).findOne({
+      _id: new ObjectId(id)
+    }) as Promise<TestAttempt | null>;
   }
 
   async getAllTestQuestions() {
@@ -263,21 +274,7 @@ class Storage {
       .toArray();
   }
 
-  async getTestEvaluationByAttemptId(attemptId: string) {
-    const db = await connectToDatabase();
-    return await db.collection('test_evaluations')
-      .findOne({ attemptId: new ObjectId(attemptId) });
-  }
 
-  async updateTestEvaluation(id: string, updates: any) {
-    const db = await connectToDatabase();
-    const result = await db.collection('test_evaluations').findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: { ...updates, updatedAt: new Date() } },
-      { returnDocument: 'after' }
-    );
-    return result;
-  }
 
   // Performance Report methods
   async createPerformanceReport(reportData: InsertPerformanceReport): Promise<PerformanceReport> {

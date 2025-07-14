@@ -65,7 +65,7 @@ export interface TestAnswer {
   answer: string | number | string[];
   timeSpent: number; // in seconds
   isCorrect?: boolean;
-  pointsEarned?: number;
+  score?: number;
   feedback?: string;
 }
 
@@ -76,48 +76,14 @@ export interface TestEvaluation {
   sessionId: ObjectId;
   traineeId: ObjectId;
   evaluatorId: ObjectId;
-  totalPoints: number;
-  maxPoints: number;
+  totalScore: number;
+  maxScore: number;
   percentage: number;
   grade: 'A+' | 'A' | 'B+' | 'B' | 'C+' | 'C' | 'D' | 'F';
-  questionEvaluations: QuestionEvaluation[];
   overallFeedback: string;
-  strengths: string[];
-  improvements: string[];
-  evaluatedAt: Date;
-  status: 'pending' | 'completed' | 'reviewed';
-}
-
-export interface QuestionEvaluation {
-  questionId: ObjectId;
-  questionNumber: number;
-  pointsAwarded: number;
-  maxPoints: number;
-  feedback: string;
-  isCorrect: boolean;
-}
-
-export interface PerformanceReport {
-  _id?: ObjectId;
-  id?: string;
-  traineeId: ObjectId;
-  reportPeriod: string; // e.g., "2024-01", "2024-Q1"
-  totalTests: number;
-  completedTests: number;
-  averageScore: number;
-  averageGrade: string;
-  categoryPerformance: CategoryPerformance[];
-  improvementAreas: string[];
-  strengths: string[];
-  generatedAt: Date;
-}
-
-export interface CategoryPerformance {
-  category: string;
-  totalQuestions: number;
-  correctAnswers: number;
-  accuracy: number;
-  averagePoints: number;
+  questionFeedback?: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Insert types (without _id)
@@ -126,7 +92,6 @@ export type InsertTestSession = Omit<TestSession, '_id' | 'id'>;
 export type InsertTestQuestion = Omit<TestQuestion, '_id' | 'id'>;
 export type InsertTestAttempt = Omit<TestAttempt, '_id' | 'id'>;
 export type InsertTestEvaluation = Omit<TestEvaluation, '_id' | 'id'>;
-export type InsertPerformanceReport = Omit<PerformanceReport, '_id' | 'id'>;
 
 // Zod validation schemas
 export const loginSchema = z.object({
@@ -177,17 +142,12 @@ export const testAttemptSchema = z.object({
 
 export const testEvaluationSchema = z.object({
   attemptId: z.string().min(1),
-  questionEvaluations: z.array(z.object({
-    questionId: z.string(),
-    questionNumber: z.number(),
-    pointsAwarded: z.number().min(0),
-    maxPoints: z.number().min(1),
-    feedback: z.string().optional(),
-    isCorrect: z.boolean(),
-  })),
+  totalScore: z.number().min(0),
+  maxScore: z.number().min(1),
+  percentage: z.number().min(0).max(100),
+  grade: z.enum(['A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'F']),
   overallFeedback: z.string().optional(),
-  strengths: z.array(z.string()).default([]),
-  improvements: z.array(z.string()).default([]),
+  questionFeedback: z.array(z.string()).optional(),
 });
 
 export const questionFormSchema = z.object({
@@ -219,5 +179,5 @@ export const COLLECTIONS = {
   TEST_QUESTIONS: 'test_questions', 
   TEST_ATTEMPTS: 'test_attempts',
   TEST_EVALUATIONS: 'test_evaluations',
-  PERFORMANCE_REPORTS: 'performance_reports',
+  QA_QUESTIONS: 'qa_questions',
 } as const;
