@@ -19,26 +19,9 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const error = urlParams.get('error');
-
-    if (token) {
-      localStorage.setItem('token', token);
-      // Clear URL parameters without reload
-      window.history.replaceState({}, document.title, window.location.pathname);
-      // Trigger auth context to refresh user state
-      window.location.reload();
-    } else if (error) {
-      toast({
-        title: "Error",
-        description: "Google sign-in failed. Please try again.",
-        variant: "destructive",
-      });
-      // Clear error parameter from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [toast]);
+    // Always ensure we're at root URL
+    window.history.replaceState({}, document.title, '/');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

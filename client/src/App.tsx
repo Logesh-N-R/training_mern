@@ -16,11 +16,51 @@ const AppContent = React.memo(() => {
   const { user, isLoading } = useAuth();
   const [currentView, setCurrentView] = React.useState<'login' | 'register' | 'dashboard'>('login');
 
-  // Clear any URL routing on app load
+  // Force URL to always be / and prevent any routing
   React.useEffect(() => {
-    if (window.location.pathname !== '/') {
-      window.history.replaceState({}, document.title, '/');
-    }
+    const forceRootUrl = () => {
+      if (window.location.pathname !== '/' || window.location.search || window.location.hash) {
+        window.history.replaceState({}, document.title, '/');
+      }
+    };
+
+    // Force on load
+    forceRootUrl();
+
+    // Listen for any URL changes and force back to /
+    const handlePopState = () => {
+      forceRootUrl();
+    };
+
+    const handlePushState = () => {
+      forceRootUrl();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Override history methods to prevent URL changes
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(state, title, url) {
+      if (url && url !== '/') {
+        return originalPushState.call(this, state, title, '/');
+      }
+      return originalPushState.call(this, state, title, url);
+    };
+    
+    window.history.replaceState = function(state, title, url) {
+      if (url && url !== '/') {
+        return originalReplaceState.call(this, state, title, '/');
+      }
+      return originalReplaceState.call(this, state, title, url);
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
   }, []);
 
   // Auto-navigate based on user state

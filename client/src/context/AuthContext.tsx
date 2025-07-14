@@ -42,6 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        // Ensure URL stays at root after user fetch
+        if (window.location.pathname !== '/') {
+          window.history.replaceState({}, document.title, '/');
+        }
       } else {
         localStorage.removeItem('token');
         setToken(null);
@@ -61,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
+    
+    // Ensure URL stays at root after login
+    window.history.replaceState({}, document.title, '/');
   };
 
   const register = async (name: string, email: string, password: string) => {
@@ -70,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
+    
+    // Ensure URL stays at root after register
+    window.history.replaceState({}, document.title, '/');
   };
 
   const loginWithGoogle = async () => {
