@@ -1,7 +1,8 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Star, CheckCircle, XCircle } from 'lucide-react';
+import { Save, Star, CheckCircle, XCircle, User } from 'lucide-react';
 import { ApiService } from '@/services/api';
 import { Submission } from '@shared/schema';
 
@@ -36,19 +37,52 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch users to get trainee information
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: () => ApiService.get('/api/users'),
+    enabled: isOpen,
+  });
+
+  // Fetch trainees as fallback
+  const { data: trainees = [] } = useQuery({
+    queryKey: ['/api/trainees'],
+    queryFn: () => ApiService.get('/api/trainees'),
+    enabled: isOpen,
+  });
+
+  // Find the user who submitted this
+  const submittingUser = [...users, ...trainees].find(user => 
+    user.id === submission.userId || 
+    user._id === submission.userId ||
+    user.id === submission.userId?.toString() ||
+    user._id === submission.userId?.toString()
+  );
+
   const form = useForm<EvaluationFormData>({
     resolver: zodResolver(evaluationSchema),
     defaultValues: {
-      questionAnswers: submission.questionAnswers.map(qa => ({
+      questionAnswers: submission.questionAnswers?.map(qa => ({
         score: qa.score || 0,
         feedback: qa.feedback || '',
-      })),
+      })) || [],
       overallFeedback: submission.evaluation?.overallFeedback || '',
     },
   });
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
-  const questionAnswers = watch('questionAnswers');
+  const questionAnswers = watch('questionAnswers') || [];
+
+  // Ensure we have the right number of question answers
+  useEffect(() => {
+    if (submission.questionAnswers && questionAnswers.length !== submission.questionAnswers.length) {
+      const initialAnswers = submission.questionAnswers.map(qa => ({
+        score: qa.score || 0,
+        feedback: qa.feedback || '',
+      }));
+      setValue('questionAnswers', initialAnswers);
+    }
+  }, [submission.questionAnswers, questionAnswers.length, setValue]);
 
   const evaluateMutation = useMutation({
     mutationFn: (data: EvaluationFormData) => {
@@ -68,8 +102,8 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
       const evaluationData = {
         questionAnswers: submission.questionAnswers.map((qa, index) => ({
           ...qa,
-          score: data.questionAnswers[index].score,
-          feedback: data.questionAnswers[index].feedback,
+          score: data.questionAnswers[index]?.score || 0,
+          feedback: data.questionAnswers[index]?.feedback || '',
         })),
         evaluation: {
           totalScore,
@@ -79,11 +113,16 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
           evaluatedBy: 'Current Admin', // This would be the logged-in admin's name
           evaluatedAt: new Date().toISOString(),
           overallFeedback: data.overallFeedback,
+          questionFeedback: data.questionAnswers.map(qa => ({
+            score: qa.score,
+            feedback: qa.feedback || '',
+          })),
         },
         status: 'Evaluated',
       };
 
-      return ApiService.put(`/api/submissions/${submission.id}`, evaluationData);
+      console.log('Sending evaluation data:', evaluationData);
+      return ApiService.put(`/api/submissions/${submission.id || submission._id}`, evaluationData);
     },
     onSuccess: () => {
       toast({
@@ -94,6 +133,7 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
       onClose();
     },
     onError: (error) => {
+      console.error('Evaluation error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to evaluate submission",
@@ -103,6 +143,7 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
   });
 
   const onSubmit = (data: EvaluationFormData) => {
+    console.log('Submitting evaluation:', data);
     evaluateMutation.mutate(data);
   };
 
@@ -112,9 +153,23 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
     return 'text-red-600';
   };
 
-  const currentTotalScore = questionAnswers.reduce((sum, qa) => sum + qa.score, 0);
-  const maxScore = submission.questionAnswers.length * 10;
-  const currentPercentage = Math.round((currentTotalScore / maxScore) * 100);
+  const currentTotalScore = questionAnswers.reduce((sum, qa) => sum + (qa?.score || 0), 0);
+  const maxScore = submission.questionAnswers?.length * 10 || 0;
+  const currentPercentage = maxScore > 0 ? Math.round((currentTotalScore / maxScore) * 100) : 0;
+
+  if (!submission.questionAnswers || submission.questionAnswers.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>No Questions Available</DialogTitle>
+          </DialogHeader>
+          <p>This submission does not contain any questions to evaluate.</p>
+          <Button onClick={onClose}>Close</Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -128,10 +183,20 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
 
         <div className="space-y-6">
           {/* Submission Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Trainee</Label>
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4 text-slate-500" />
+                <p className="text-slate-900">{submittingUser?.name || 'Unknown User'}</p>
+              </div>
+              {submittingUser?.email && (
+                <p className="text-xs text-slate-600">{submittingUser.email}</p>
+              )}
+            </div>
             <div>
               <Label className="text-sm font-medium text-slate-700">Date</Label>
-              <p className="text-slate-900">{new Date(submission.date).toLocaleDateString()}</p>
+              <p className="text-slate-900">{new Date(submission.date || submission.submittedAt).toLocaleDateString()}</p>
             </div>
             <div>
               <Label className="text-sm font-medium text-slate-700">Understanding Level</Label>
@@ -154,47 +219,47 @@ export function SubmissionEvaluation({ submission, isOpen, onClose }: Submission
                   <CardContent className="p-4">
                     <div className="space-y-4">
                       <div className="mb-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-slate-900">{qa.topic}</h4>
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {qa.type === 'text' ? 'Text Answer' : 
-                               qa.type === 'multiple-choice' ? 'Multiple Choice' :
-                               qa.type === 'choose-best' ? 'Choose Best' :
-                               qa.type === 'true-false' ? 'True/False' :
-                               qa.type === 'fill-blank' ? 'Fill Blank' : 'Text Answer'}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 text-sm mt-1">{qa.question}</p>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-slate-900">{qa.topic || `Question ${index + 1}`}</h4>
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {qa.type === 'text' ? 'Text Answer' : 
+                             qa.type === 'multiple-choice' ? 'Multiple Choice' :
+                             qa.type === 'choose-best' ? 'Choose Best' :
+                             qa.type === 'true-false' ? 'True/False' :
+                             qa.type === 'fill-blank' ? 'Fill Blank' : 'Text Answer'}
+                          </span>
                         </div>
+                        <p className="text-slate-700 text-sm mt-1">{qa.question}</p>
+                      </div>
 
-                        {qa.options && qa.options.length > 0 && (
-                          <div className="mb-3">
-                            <Label className="text-sm font-medium text-slate-700">Available Options:</Label>
-                            <div className="mt-1 space-y-1">
-                              {qa.options.map((option: string, optIdx: number) => (
-                                <div key={optIdx} className="text-xs text-slate-600 ml-2">
-                                  • {option}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {qa.correctAnswer && (
-                          <div className="mb-3">
-                            <Label className="text-sm font-medium text-green-700">Correct Answer:</Label>
-                            <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
-                              <p className="text-green-800 text-sm">{qa.correctAnswer}</p>
-                            </div>
-                          </div>
-                        )}
-
+                      {qa.options && qa.options.length > 0 && (
                         <div className="mb-3">
-                          <Label className="text-sm font-medium text-slate-700">Student's Answer:</Label>
-                          <div className="mt-1 p-3 bg-slate-50 rounded border">
-                            <p className="text-slate-900">{qa.answer}</p>
+                          <Label className="text-sm font-medium text-slate-700">Available Options:</Label>
+                          <div className="mt-1 space-y-1">
+                            {qa.options.map((option: string, optIdx: number) => (
+                              <div key={optIdx} className="text-xs text-slate-600 ml-2">
+                                • {option}
+                              </div>
+                            ))}
                           </div>
                         </div>
+                      )}
+
+                      {qa.correctAnswer && (
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium text-green-700">Correct Answer:</Label>
+                          <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
+                            <p className="text-green-800 text-sm">{qa.correctAnswer}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mb-3">
+                        <Label className="text-sm font-medium text-slate-700">Student's Answer:</Label>
+                        <div className="mt-1 p-3 bg-slate-50 rounded border">
+                          <p className="text-slate-900">{qa.answer || 'No answer provided'}</p>
+                        </div>
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>

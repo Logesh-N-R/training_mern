@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,17 +53,19 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
   const [submissionId, setSubmissionId] = useState<string | null>(null);
 
   const handleAutoSubmit = useCallback(() => {
-    setStatus('Completed');
-    setIsCompleted(true);
-    handleSubmit(true);
-  }, []);
+    if (!isCompleted && !isSubmitting) {
+      setStatus('Completed');
+      setIsCompleted(true);
+      handleSubmit(true);
+    }
+  }, [isCompleted, isSubmitting]);
 
   // Initialize form with existing submission data if available
   useEffect(() => {
     if (existingSubmission) {
       const submissionAnswers: Record<number, string> = {};
       existingSubmission.questionAnswers?.forEach((qa: any, index: number) => {
-        submissionAnswers[index] = qa.answer;
+        submissionAnswers[index] = qa.answer || '';
       });
       setAnswers(submissionAnswers);
       setOverallUnderstanding(existingSubmission.overallUnderstanding || '');
@@ -73,6 +76,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       // Check if submission is completed or submitted
       const isSubmissionCompleted = existingSubmission.status === 'submitted' || 
                                   existingSubmission.status === 'Completed' ||
+                                  existingSubmission.status === 'completed' ||
                                   existingSubmission.evaluation;
       setIsCompleted(isSubmissionCompleted);
     }
@@ -91,14 +95,16 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
   }, [timeRemaining, isCompleted, handleAutoSubmit, viewOnly]);
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionIndex]: answer
-    }));
+    if (!viewOnly && !isCompleted) {
+      setAnswers(prev => ({
+        ...prev,
+        [questionIndex]: answer
+      }));
+    }
   };
 
   const handleSaveAsDraft = async () => {
-    if (isSubmitting || viewOnly) return;
+    if (isSubmitting || viewOnly || isCompleted) return;
 
     setIsSubmitting(true);
 
@@ -108,7 +114,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         type: question.type,
         topic: question.topic,
         answer: answers[index] || '',
-        options: question.options || []
+        options: question.options || [],
+        correctAnswer: question.correctAnswer || ''
       }));
 
       const submission = {
@@ -119,7 +126,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         questionAnswers,
         overallUnderstanding,
         status: 'saved',
-        remarks
+        remarks,
+        userId: user?.id || user?._id
       };
 
       const result = await onSubmit(submission);
@@ -148,6 +156,16 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
   const handleSubmit = async (isAutoSubmit = false) => {
     if (isSubmitting || viewOnly) return;
 
+    // Validate required fields for final submission
+    if (!isAutoSubmit && !overallUnderstanding) {
+      toast({
+        title: "Error",
+        description: "Please select your overall understanding level before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -156,7 +174,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         type: question.type,
         topic: question.topic,
         answer: answers[index] || '',
-        options: question.options || []
+        options: question.options || [],
+        correctAnswer: question.correctAnswer || ''
       }));
 
       const submission = {
@@ -165,9 +184,10 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         date: questionSet.date,
         sessionTitle: questionSet.sessionTitle,
         questionAnswers,
-        overallUnderstanding,
-        status: 'submitted',
-        remarks,
+        overallUnderstanding: overallUnderstanding || 'Average',
+        status: 'Completed',
+        remarks: remarks || '',
+        userId: user?.id || user?._id,
         submittedAt: new Date().toISOString()
       };
 
@@ -181,7 +201,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       }
 
       setIsCompleted(true);
-      setStatus('submitted');
+      setStatus('Completed');
     } catch (error) {
       console.error('Submission error:', error);
       toast({
@@ -203,28 +223,10 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
 
   const renderQuestion = (question: Question, index: number) => {
     const currentAnswer = answers[index] || '';
-    const canEdit = !viewOnly && status !== 'submitted' && status !== 'Completed' && !existingSubmission?.evaluation;
+    const canEdit = !viewOnly && !isCompleted && status !== 'Completed' && status !== 'submitted';
 
     switch (question.type) {
       case 'multiple-choice':
-        return (
-          <RadioGroup
-            value={currentAnswer}
-            onValueChange={(value) => canEdit && handleAnswerChange(index, value)}
-            className="space-y-2"
-            disabled={!canEdit}
-          >
-            {question.options?.map((option, optionIndex) => (
-              <div key={optionIndex} className="flex items-center space-x-2">
-                <RadioGroupItem value={option} id={`q${index}-${optionIndex}`} disabled={!canEdit} />
-                <Label htmlFor={`q${index}-${optionIndex}`} className={`flex-1 ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}>
-                  {option}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        );
-
       case 'choose-best':
         return (
           <RadioGroup
@@ -268,7 +270,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         return (
           <Textarea
             value={currentAnswer}
-            onChange={(e) => handleAnswerChange(index, e.target.value)}
+            onChange={(e) => canEdit && handleAnswerChange(index, e.target.value)}
             placeholder="Enter your answer..."
             className="min-h-[100px] resize-none"
             disabled={!canEdit}
@@ -279,7 +281,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         return (
           <Input
             value={currentAnswer}
-            onChange={(e) => handleAnswerChange(index, e.target.value)}
+            onChange={(e) => canEdit && handleAnswerChange(index, e.target.value)}
             placeholder="Enter your answer..."
             disabled={!canEdit}
           />
@@ -306,14 +308,16 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
               </p>
             </div>
             <div className="text-right">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600' : 'text-blue-600'}`}>
-                  {formatTime(timeRemaining)}
-                </span>
-              </div>
+              {!viewOnly && (
+                <div className="flex items-center space-x-2 mb-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600' : 'text-blue-600'}`}>
+                    {formatTime(timeRemaining)}
+                  </span>
+                </div>
+              )}
               <Badge variant={isCompleted ? "default" : "secondary"}>
-                {isCompleted ? "Completed" : "In Progress"}
+                {isCompleted ? "Completed" : status}
               </Badge>
             </div>
           </div>
@@ -373,7 +377,11 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="understanding">Rate your overall understanding of today's session</Label>
-            <Select value={overallUnderstanding} onValueChange={setOverallUnderstanding} disabled={viewOnly || isCompleted}>
+            <Select 
+              value={overallUnderstanding} 
+              onValueChange={setOverallUnderstanding} 
+              disabled={viewOnly || isCompleted}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select understanding level" />
               </SelectTrigger>
@@ -383,21 +391,6 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
                 <SelectItem value="Average">Average</SelectItem>
                 <SelectItem value="Below Average">Below Average</SelectItem>
                 <SelectItem value="Poor">Poor</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus} disabled={viewOnly || isCompleted}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="saved">Saved</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Not Started">Not Started</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -417,10 +410,10 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
       </Card>
 
       {/* Save and Submit Buttons */}
-      {!viewOnly && (
+      {!viewOnly && !isCompleted && (
         <Card>
           <CardContent className="pt-6">
-            {timeRemaining < 300 && !isCompleted && (
+            {timeRemaining < 300 && (
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -431,8 +424,8 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                onClick={() => handleSaveAsDraft()} 
-                disabled={isSubmitting || isCompleted}
+                onClick={handleSaveAsDraft} 
+                disabled={isSubmitting}
                 variant="outline"
                 className="flex-1"
                 size="lg"
@@ -452,7 +445,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
 
               <Button 
                 onClick={() => handleSubmit()} 
-                disabled={isSubmitting || isCompleted || !overallUnderstanding}
+                disabled={isSubmitting || !overallUnderstanding}
                 className="flex-1"
                 size="lg"
               >
@@ -464,7 +457,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    {isCompleted ? 'Test Submitted' : 'Submit Test'}
+                    Submit Test
                   </>
                 )}
               </Button>
@@ -473,14 +466,17 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
         </Card>
       )}
 
-      {/* View Mode Indicator */}
-      {viewOnly && (
+      {/* Completion Status */}
+      {isCompleted && (
         <Card>
           <CardContent className="pt-6">
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                This is a read-only view of your submitted test. You cannot make changes.
+                {viewOnly 
+                  ? "This is a read-only view of your submitted test."
+                  : "Your test has been submitted successfully! You can no longer make changes."
+                }
               </AlertDescription>
             </Alert>
           </CardContent>

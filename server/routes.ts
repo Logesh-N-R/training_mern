@@ -1,3 +1,4 @@
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
@@ -317,6 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const submissions = await storage.getSubmissionsByUser(req.user!.id);
         res.json(submissions);
       } catch (error) {
+        console.error("Error fetching user submissions:", error);
         res.status(500).json({ message: "Server error" });
       }
     },
@@ -331,6 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const submissions = await storage.getAllSubmissions();
         res.json(submissions);
       } catch (error) {
+        console.error("Error fetching all submissions:", error);
         res.status(500).json({ message: "Server error" });
       }
     },
@@ -343,6 +346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: AuthRequest, res) => {
       try {
         console.log("Submission request body:", req.body);
+        console.log("User from token:", req.user);
+        
         const {
           id,
           questionSetId,
@@ -352,6 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overallUnderstanding,
           status,
           remarks,
+          submittedAt
         } = req.body;
 
         // Basic validation
@@ -364,38 +370,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid request data" });
         }
 
+        const userId = req.user!.id;
+        console.log("Processing submission for user ID:", userId);
+
         // If submission ID is provided, update existing submission
         if (id) {
+          console.log("Updating existing submission:", id);
+          
           const updatedSubmission = await storage.updateSubmission(id, {
             questionSetId: new ObjectId(questionSetId),
             sessionTitle,
             questionAnswers,
-            overallUnderstanding,
-            status,
-            remarks,
-            submittedAt: status === 'submitted' ? new Date() : undefined,
+            overallUnderstanding: overallUnderstanding || 'Average',
+            status: status || 'Completed',
+            remarks: remarks || '',
+            submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : undefined),
           });
 
           if (!updatedSubmission) {
             return res.status(404).json({ message: "Submission not found" });
           }
 
+          console.log("Submission updated successfully:", updatedSubmission._id);
           return res.status(200).json(updatedSubmission);
         }
 
-        // Check if user has already submitted for this date
-        const existingSubmission = await storage.getSubmissionByUserAndDate(
-          req.user!.id,
-          date,
+        // Check if user has already submitted for this question set
+        const existingSubmission = await storage.getSubmissionByUserAndQuestionSet(
+          userId,
+          questionSetId
         );
 
-        // If submission exists and has been evaluated, don't allow resubmission
         if (existingSubmission) {
-          // If submission exists and has been evaluated, don't allow resubmission
-          if (existingSubmission.evaluation && status === 'submitted') {
+          console.log("Found existing submission:", existingSubmission._id);
+          
+          // If submission exists and has been evaluated, don't allow resubmission for completed status
+          if (existingSubmission.evaluation && status === 'Completed') {
             return res.status(400).json({
-              message:
-                "Test has already been evaluated and cannot be resubmitted",
+              message: "Test has already been evaluated and cannot be resubmitted",
             });
           }
 
@@ -406,33 +418,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               questionSetId: new ObjectId(questionSetId),
               sessionTitle,
               questionAnswers,
-              overallUnderstanding,
-              status,
-              remarks,
-              submittedAt: (status === 'submitted' || status === 'completed') ? new Date() : existingSubmission.submittedAt,
+              overallUnderstanding: overallUnderstanding || 'Average',
+              status: status || 'Completed',
+              remarks: remarks || '',
+              submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : existingSubmission.submittedAt),
             },
           );
 
+          console.log("Existing submission updated:", updatedSubmission?._id);
           return res.status(200).json(updatedSubmission);
         }
 
         // Create new submission if none exists
+        console.log("Creating new submission for user:", userId);
+        
         const submission = await storage.createSubmission({
           questionSetId: new ObjectId(questionSetId),
           date,
           sessionTitle,
           questionAnswers,
-          overallUnderstanding: overallUnderstanding || '',
-          status,
+          overallUnderstanding: overallUnderstanding || 'Average',
+          status: status || 'Completed',
           remarks: remarks || '',
-          userId: new ObjectId(req.user!.id),
-          submittedAt: (status === 'submitted' || status === 'completed') ? new Date() : undefined,
+          userId: new ObjectId(userId),
+          submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : undefined),
         });
 
+        console.log("New submission created:", submission._id);
         res.status(201).json(submission);
       } catch (error) {
         console.error("Submission validation error:", error);
-        res.status(400).json({ message: "Invalid request data" });
+        res.status(400).json({ 
+          message: "Invalid request data", 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        });
       }
     },
   );
@@ -446,11 +465,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { id } = req.params;
         const updates = req.body;
 
+        console.log("Updating submission:", id);
+        console.log("Update data:", updates);
+
         // If evaluation data is being added, set the evaluatedBy field
         if (updates.evaluation) {
           const user = await storage.getUser(req.user!.id);
           updates.evaluation.evaluatedBy = user?.name || req.user!.email;
           updates.evaluation.evaluatedAt = new Date().toISOString();
+          updates.status = 'Evaluated'; // Set status to Evaluated when evaluation is added
         }
 
         const submission = await storage.updateSubmission(id, updates);
@@ -458,6 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Submission not found" });
         }
 
+        console.log("Submission updated successfully:", submission._id);
         res.json(submission);
       } catch (error) {
         console.error("Submission update error:", error);
