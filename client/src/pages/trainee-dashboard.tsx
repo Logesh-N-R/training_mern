@@ -1,28 +1,44 @@
+
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useAuthRedirect } from '@/hooks/use-auth';
 import { Navigation } from '@/components/navigation';
-import { toast } from '@/hooks/use-toast';
-import { TestForm } from '@/components/test-form';
 import { QAModule } from '@/components/qa-module';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle, Calendar, Clock, FileSpreadsheet, Eye, User, Star, BookOpen, GraduationCap, BarChart3, Settings, TrendingUp } from 'lucide-react';
+import { 
+  BookOpen, 
+  Clock, 
+  Trophy, 
+  TrendingUp, 
+  Calendar,
+  Play,
+  Eye,
+  CheckCircle,
+  AlertCircle,
+  Target,
+  Award,
+  BarChart3,
+  User,
+  Sparkles
+} from 'lucide-react';
 import { ApiService } from '@/services/api';
-import { Submission } from '@shared/schema';
-import * as XLSX from 'xlsx';
-import { TestManagement } from '@/components/test-management';
+import { TestSession, TestAttempt, TestEvaluation } from '@shared/schema';
 
 export default function TraineeDashboard() {
   const { user, isLoading } = useAuthRedirect();
-  const [activeSection, setActiveSection] = useState("qa");
+  const [activeSection, setActiveSection] = useState("tests");
+  const [selectedAttempt, setSelectedAttempt] = useState<TestAttempt | null>(null);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<TestEvaluation | null>(null);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
 
   useEffect(() => {
     const handleSectionChange = (event: CustomEvent) => {
-      setActiveSection(event.detail.section || "dashboard");
+      setActiveSection(event.detail.section || "tests");
     };
 
     window.addEventListener('navigation-section-change', handleSectionChange as EventListener);
@@ -31,10 +47,10 @@ export default function TraineeDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-slate-600">Loading...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-3 text-teal-700 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -42,8 +58,9 @@ export default function TraineeDashboard() {
 
   if (!user || user.role !== 'trainee') {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
           <p className="text-slate-600">You don't have permission to access this page.</p>
         </div>
@@ -51,61 +68,68 @@ export default function TraineeDashboard() {
     );
   }
 
-  const { user: currentUser } = useAuth();
-  const queryClient = useQueryClient();
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-
-  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions/my'],
-    queryFn: () => ApiService.get('/api/submissions/my'),
+  const { data: sessions = [] } = useQuery({
+    queryKey: ['/api/test-sessions'],
+    queryFn: () => ApiService.get('/api/test-sessions'),
   });
 
-  const { data: questionSets = [], isLoading: loadingQuestionSets } = useQuery({
-    queryKey: ['/api/questions'],
-    queryFn: () => ApiService.get('/api/questions'),
+  const { data: myAttempts = [] } = useQuery({
+    queryKey: ['/api/test-attempts/my'],
+    queryFn: () => ApiService.get('/api/test-attempts/my'),
   });
 
-  const userSubmissions = submissions.filter((s: Submission) => s.userId === user.id || s.userId === user._id);
-  const completedSubmissions = userSubmissions.filter((s: Submission) => s.status === 'Completed');
-  const evaluatedSubmissions = userSubmissions.filter((s: Submission) => s.evaluation);
+  const { data: myEvaluations = [] } = useQuery({
+    queryKey: ['/api/test-evaluations/my'],
+    queryFn: () => ApiService.get('/api/test-evaluations/my'),
+  });
 
-  const averageScore = evaluatedSubmissions.length > 0 
-    ? Math.round(evaluatedSubmissions.reduce((sum: number, s: Submission) => sum + (s.evaluation?.percentage || 0), 0) / evaluatedSubmissions.length)
+  // Filter active sessions that trainee can take
+  const availableSessions = sessions.filter((session: TestSession) => session.status === 'active');
+  
+  // Get sessions with attempts
+  const sessionsWithAttempts = sessions.map((session: TestSession) => {
+    const attempt = myAttempts.find((a: TestAttempt) => a.sessionId.toString() === session._id?.toString());
+    const evaluation = attempt ? myEvaluations.find((e: TestEvaluation) => e.attemptId.toString() === attempt._id?.toString()) : null;
+    
+    return {
+      session,
+      attempt,
+      evaluation,
+      status: evaluation ? 'evaluated' : attempt ? 'submitted' : 'available'
+    };
+  });
+
+  // Statistics
+  const totalAttempts = myAttempts.length;
+  const submittedAttempts = myAttempts.filter(a => a.status === 'submitted' || a.status === 'evaluated').length;
+  const evaluatedAttempts = myEvaluations.length;
+  const averageScore = evaluatedAttempts > 0 
+    ? Math.round(myEvaluations.reduce((sum: number, e: TestEvaluation) => sum + e.percentage, 0) / evaluatedAttempts)
     : 0;
 
-  const handleViewFeedback = (submission: Submission) => {
-    setSelectedSubmission(submission);
-    setIsFeedbackModalOpen(true);
-  };
-
-  const exportSubmissions = () => {
-    const exportData = userSubmissions.map((submission: Submission) => ({
-      'Date': new Date(submission.submittedAt).toLocaleDateString(),
-      'Session': submission.sessionTitle,
-      'Status': submission.status,
-      'Understanding': submission.overallUnderstanding,
-      'Score': submission.evaluation?.percentage || 'Not Evaluated',
-      'Grade': submission.evaluation?.grade || 'Not Evaluated',
-      'Remarks': submission.remarks || 'None'
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'My Submissions');
-
-    const fileName = `my_test_submissions_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
-
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'in progress':
-        return 'bg-yellow-100 text-yellow-800';
+    switch (status) {
+      case 'available':
+        return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'submitted':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'evaluated':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'available':
+        return <Play className="w-3 h-3" />;
+      case 'submitted':
+        return <Clock className="w-3 h-3" />;
+      case 'evaluated':
+        return <CheckCircle className="w-3 h-3" />;
+      default:
+        return <AlertCircle className="w-3 h-3" />;
     }
   };
 
@@ -113,204 +137,254 @@ export default function TraineeDashboard() {
     switch (grade) {
       case 'A+':
       case 'A':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'B+':
       case 'B':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-teal-100 text-teal-800 border-teal-200';
       case 'C+':
       case 'C':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'D':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'F':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
+  const handleStartTest = (session: TestSession) => {
+    // This would open the test taking interface
+    console.log('Starting test for session:', session.title);
+  };
+
+  const handleViewEvaluation = (evaluation: TestEvaluation) => {
+    setSelectedEvaluation(evaluation);
+    setIsEvaluationModalOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-50">
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Trainee Dashboard</h2>
+        <div className="mb-8">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="p-2 bg-teal-100 rounded-lg">
+              <User className="w-6 h-6 text-teal-600" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Welcome back, {user.name}!</h1>
+              <p className="text-teal-700">Ready to continue your learning journey?</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-teal-200 rounded-full">
+                  <BookOpen className="text-teal-700 w-6 h-6" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-2xl font-bold text-teal-900">{totalAttempts}</h3>
+                  <p className="text-teal-700 font-medium">Total Tests</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-emerald-200 rounded-full">
+                  <CheckCircle className="text-emerald-700 w-6 h-6" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-2xl font-bold text-emerald-900">{submittedAttempts}</h3>
+                  <p className="text-emerald-700 font-medium">Submitted</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-amber-200 rounded-full">
+                  <Trophy className="text-amber-700 w-6 h-6" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-2xl font-bold text-amber-900">{evaluatedAttempts}</h3>
+                  <p className="text-amber-700 font-medium">Evaluated</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-purple-200 rounded-full">
+                  <TrendingUp className="text-purple-700 w-6 h-6" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-2xl font-bold text-purple-900">{averageScore}%</h3>
+                  <p className="text-purple-700 font-medium">Average Score</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tests Module */}
-        {activeSection === "test" && (
-          <div id="test">
-            {/* Test Management */}
-            <TestManagement userRole={user?.role || 'trainee'} />
-          </div>
-        )}
-
-        {/* Q&A Module */}
-        {activeSection === "qa" && (
-          <div id="qa" className="mt-6">
-            <QAModule currentUser={user} />
-          </div>
-        )}
-
-        {/* History & Progress Module */}
-        {activeSection === "history" && (
-          <div id="history" className="space-y-6">
-            {/* Progress Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-blue-100 rounded-full">
-                      <BookOpen className="text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{userSubmissions.length}</h3>
-                      <p className="text-slate-600">Total Tests</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-green-100 rounded-full">
-                      <CheckCircle className="text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{completedSubmissions.length}</h3>
-                      <p className="text-slate-600">Completed</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-purple-100 rounded-full">
-                      <Star className="text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{evaluatedSubmissions.length}</h3>
-                      <p className="text-slate-600">Evaluated</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-yellow-100 rounded-full">
-                      <TrendingUp className="text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-2xl font-bold text-slate-900">{averageScore}%</h3>
-                      <p className="text-slate-600">Avg Score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Submission History */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center">
-                    <BarChart3 className="w-5 h-5 mr-2" />
-                    My Test History
-                  </CardTitle>
-                  <Button
-                    onClick={exportSubmissions}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    size="sm"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export History
-                  </Button>
-                </div>
+        {activeSection === "tests" && (
+          <div className="space-y-8">
+            {/* Available Tests */}
+            <Card className="border-teal-200 bg-white shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200">
+                <CardTitle className="flex items-center text-teal-900">
+                  <Target className="w-5 h-5 mr-2 text-teal-600" />
+                  Available Tests
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                {loadingSubmissions ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-2 text-slate-600">Loading submissions...</p>
-                  </div>
-                ) : userSubmissions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-600">No test submissions yet</p>
-                    <p className="text-sm text-slate-500 mt-2">Complete your first test to see your history here</p>
+              <CardContent className="p-6">
+                {availableSessions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="w-16 h-16 text-teal-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-teal-900 mb-2">No Active Tests</h3>
+                    <p className="text-teal-600">Check back later for new test sessions</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Date</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Session</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Status</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Understanding</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Score</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Grade</th>
-                          <th className="px-4 py-3 text-left font-medium text-slate-700">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {userSubmissions
-                          .sort((a: Submission, b: Submission) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                          .map((submission: Submission) => (
-                          <tr key={submission.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 text-slate-900">
-                              {new Date(submission.submittedAt).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3 text-slate-900">{submission.sessionTitle}</td>
-                            <td className="px-4 py-3">
-                              <Badge className={getStatusColor(submission.status)}>
-                                {submission.status}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">{submission.overallUnderstanding}</td>
-                            <td className="px-4 py-3">
-                              {submission.evaluation ? (
-                                <span className="font-medium text-slate-900">
-                                  {submission.evaluation.percentage}%
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">Pending</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {submission.evaluation ? (
-                                <Badge className={getGradeColor(submission.evaluation.grade)}>
-                                  {submission.evaluation.grade}
-                                </Badge>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {submission.evaluation ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {availableSessions.map((session: TestSession) => {
+                      const hasAttempt = myAttempts.some((a: TestAttempt) => a.sessionId.toString() === session._id?.toString());
+                      
+                      return (
+                        <Card key={session._id?.toString()} className="border-2 border-teal-100 hover:border-teal-300 transition-all duration-200 bg-gradient-to-br from-white to-teal-50">
+                          <CardContent className="p-6">
+                            <div className="space-y-4">
+                              <div>
+                                <h3 className="font-semibold text-slate-900 text-lg mb-2">{session.title}</h3>
+                                {session.description && (
+                                  <p className="text-slate-600 text-sm">{session.description}</p>
+                                )}
+                              </div>
+
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center text-slate-600">
+                                  <Calendar className="w-4 h-4 mr-2 text-teal-500" />
+                                  {new Date(session.date).toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center text-slate-600">
+                                  <Clock className="w-4 h-4 mr-2 text-teal-500" />
+                                  {session.duration} minutes
+                                </div>
+                                <div className="flex items-center text-slate-600">
+                                  <Target className="w-4 h-4 mr-2 text-teal-500" />
+                                  {session.startTime} - {session.endTime}
+                                </div>
+                              </div>
+
+                              <Button
+                                onClick={() => handleStartTest(session)}
+                                disabled={hasAttempt}
+                                className={`w-full ${hasAttempt 
+                                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                                  : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-md'
+                                }`}
+                              >
+                                <Play className="w-4 h-4 mr-2" />
+                                {hasAttempt ? 'Already Attempted' : 'Start Test'}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Test History */}
+            <Card className="border-emerald-200 bg-white shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200">
+                <CardTitle className="flex items-center text-emerald-900">
+                  <BarChart3 className="w-5 h-5 mr-2 text-emerald-600" />
+                  My Test History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {sessionsWithAttempts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-emerald-900 mb-2">No Test History</h3>
+                    <p className="text-emerald-600">Your completed tests will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {sessionsWithAttempts
+                      .filter(item => item.attempt)
+                      .sort((a, b) => new Date(b.attempt!.startedAt).getTime() - new Date(a.attempt!.startedAt).getTime())
+                      .map((item) => (
+                        <Card key={item.session._id?.toString()} className="border border-slate-200 hover:border-emerald-300 transition-colors">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <h3 className="font-semibold text-slate-900">{item.session.title}</h3>
+                                  <Badge className={`${getStatusColor(item.status)} flex items-center gap-1`}>
+                                    {getStatusIcon(item.status)}
+                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-slate-500">Date Taken</p>
+                                    <p className="font-medium text-slate-900">
+                                      {new Date(item.attempt!.startedAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500">Time Spent</p>
+                                    <p className="font-medium text-slate-900">{item.attempt!.timeSpent} min</p>
+                                  </div>
+                                  {item.evaluation && (
+                                    <>
+                                      <div>
+                                        <p className="text-slate-500">Score</p>
+                                        <p className="font-bold text-emerald-700">{item.evaluation.percentage}%</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-slate-500">Grade</p>
+                                        <Badge className={getGradeColor(item.evaluation.grade)}>
+                                          {item.evaluation.grade}
+                                        </Badge>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {item.evaluation && (
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
-                                  className="text-primary hover:text-blue-700"
-                                  onClick={() => handleViewFeedback(submission)}
+                                  onClick={() => handleViewEvaluation(item.evaluation!)}
+                                  className="ml-4 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                                 >
                                   <Eye className="w-4 h-4 mr-1" />
-                                  View Feedback
+                                  View Details
                                 </Button>
-                              ) : (
-                                <span className="text-slate-400 text-sm">No feedback yet</span>
                               )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -318,118 +392,124 @@ export default function TraineeDashboard() {
           </div>
         )}
 
-        {/* Others Module */}
-        {activeSection === "others" && (
-          <div id="others">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="w-5 h-5 mr-2" />
-                  Additional Features
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-slate-900">Profile Information</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2 text-slate-500" />
-                        <span className="text-slate-600">Name: {user.name}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="w-4 h-4 mr-2 text-slate-500">@</span>
-                        <span className="text-slate-600">Email: {user.email}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <GraduationCap className="w-4 h-4 mr-2 text-slate-500" />
-                        <span className="text-slate-600">Role: Trainee</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-slate-900">Quick Actions</h3>
-                    <div className="space-y-2">
-                      <Button
-                        onClick={exportSubmissions}
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <FileSpreadsheet className="w-4 h-4 mr-2" />
-                        Export All Data
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'history' } }))}
-                      >
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        View Progress Report
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Q&A Module */}
+        {activeSection === "qa" && (
+          <div className="mt-6">
+            <QAModule currentUser={user} />
           </div>
         )}
 
-        {/* Feedback Modal */}
-        <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
+        {/* Performance Module */}
+        {activeSection === "performance" && (
+          <Card className="border-purple-200 bg-white shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
+              <CardTitle className="flex items-center text-purple-900">
+                <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+                Performance Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="text-center py-12">
+                <Award className="w-16 h-16 text-purple-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-purple-900 mb-2">Performance Analytics</h3>
+                <p className="text-purple-600">Detailed performance analytics coming soon!</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Evaluation Details Modal */}
+        <Dialog open={isEvaluationModalOpen} onOpenChange={setIsEvaluationModalOpen}>
           <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detailed Feedback</DialogTitle>
+              <DialogTitle className="flex items-center text-emerald-900">
+                <Trophy className="w-5 h-5 mr-2" />
+                Test Evaluation Details
+              </DialogTitle>
             </DialogHeader>
-            {selectedSubmission && selectedSubmission.evaluation && (
+            {selectedEvaluation && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Overall Score</label>
-                    <p className="text-2xl font-bold text-slate-900">{selectedSubmission.evaluation.percentage}%</p>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-emerald-700">Overall Score</p>
+                    <p className="text-3xl font-bold text-emerald-900">{selectedEvaluation.percentage}%</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Grade</label>
-                    <Badge className={`text-lg px-3 py-1 ${getGradeColor(selectedSubmission.evaluation.grade)}`}>
-                      {selectedSubmission.evaluation.grade}
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-emerald-700">Grade</p>
+                    <Badge className={`text-lg px-3 py-1 ${getGradeColor(selectedEvaluation.grade)}`}>
+                      {selectedEvaluation.grade}
                     </Badge>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Understanding Level</label>
-                    <p className="text-lg font-medium text-slate-900">{selectedSubmission.overallUnderstanding}</p>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-emerald-700">Points Earned</p>
+                    <p className="text-2xl font-bold text-emerald-900">
+                      {selectedEvaluation.totalPoints}/{selectedEvaluation.maxPoints}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-emerald-700">Evaluated Date</p>
+                    <p className="text-sm font-medium text-emerald-900">
+                      {new Date(selectedEvaluation.evaluatedAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
 
+                {selectedEvaluation.overallFeedback && (
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <h4 className="font-medium text-slate-900 mb-2">Overall Feedback</h4>
+                    <p className="text-slate-700">{selectedEvaluation.overallFeedback}</p>
+                  </div>
+                )}
+
+                {selectedEvaluation.strengths.length > 0 && (
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <h4 className="font-medium text-emerald-900 mb-2">Strengths</h4>
+                    <ul className="list-disc list-inside space-y-1 text-emerald-800">
+                      {selectedEvaluation.strengths.map((strength, index) => (
+                        <li key={index}>{strength}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selectedEvaluation.improvements.length > 0 && (
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <h4 className="font-medium text-amber-900 mb-2">Areas for Improvement</h4>
+                    <ul className="list-disc list-inside space-y-1 text-amber-800">
+                      {selectedEvaluation.improvements.map((improvement, index) => (
+                        <li key={index}>{improvement}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-3">Question-wise Feedback</h4>
-                  <div className="space-y-4">
-                    {selectedSubmission.evaluation.questionFeedback?.map((feedback: any, index: number) => (
+                  <h4 className="font-medium text-slate-900 mb-4">Question-wise Performance</h4>
+                  <div className="space-y-3">
+                    {selectedEvaluation.questionEvaluations.map((qe, index) => (
                       <Card key={index} className="border border-slate-200">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h5 className="font-medium text-slate-900">Question {index + 1}</h5>
+                            <h5 className="font-medium text-slate-900">Question {qe.questionNumber}</h5>
                             <div className="text-right">
-                              <span className="font-medium text-slate-900">{feedback.score}/5</span>
-                              <p className="text-sm text-slate-600">points</p>
+                              <span className={`font-bold ${qe.isCorrect ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {qe.pointsAwarded}/{qe.maxPoints} points
+                              </span>
+                              {qe.isCorrect ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600 ml-2 inline" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4 text-red-600 ml-2 inline" />
+                              )}
                             </div>
                           </div>
-                          {feedback.feedback && (
-                            <p className="text-slate-700 text-sm mt-2">{feedback.feedback}</p>
+                          {qe.feedback && (
+                            <p className="text-slate-700 text-sm mt-2">{qe.feedback}</p>
                           )}
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 </div>
-
-                {selectedSubmission.evaluation.overallFeedback && (
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-2">Overall Feedback</h4>
-                    <div className="p-4 bg-slate-50 rounded-lg">
-                      <p className="text-slate-700">{selectedSubmission.evaluation.overallFeedback}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </DialogContent>

@@ -1,4 +1,3 @@
-
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
@@ -18,7 +17,7 @@ import express from "express";
 import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth routes
+  // Auth routes (keeping existing auth routes)
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
@@ -34,7 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken({
-        id: user.id,
+        id: user._id?.toString() || user.id,
         email: user.email,
         role: user.role,
       });
@@ -42,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         token,
         user: {
-          id: user.id,
+          id: user._id?.toString() || user.id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -65,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({ ...userData, role: "trainee" });
 
       const token = generateToken({
-        id: user.id,
+        id: user._id?.toString() || user.id,
         email: user.email,
         role: user.role,
       });
@@ -73,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({
         token,
         user: {
-          id: user.id,
+          id: user._id?.toString() || user.id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -92,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        id: user.id,
+        id: user._id?.toString() || user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -200,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken({
-        id: user.id,
+        id: user._id?.toString() || user.id,
         email: user.email,
         role: user.role,
       });
@@ -213,304 +212,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Question routes
-  app.get(
-    "/api/questions/today",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const questions = await storage.getQuestionsByDate(today);
+  // Test Session routes
+  app.get("/api/test-sessions", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (req.user!.role === 'trainee') {
+        const sessions = await storage.getActiveTestSessions();
+        res.json(sessions);
+      } else {
+        const sessions = await storage.getAllTestSessions();
+        res.json(sessions);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/test-sessions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const sessionData = {
+        ...req.body,
+        createdBy: new ObjectId(req.user!.id),
+      };
+
+      const session = await storage.createTestSession(sessionData);
+      res.status(201).json(session);
+    } catch (error) {
+      console.error("Test session creation error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  app.put("/api/test-sessions/:id", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const session = await storage.updateTestSession(id, updates);
+      if (!session) {
+        return res.status(404).json({ message: "Test session not found" });
+      }
+
+      res.json(session);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  app.delete("/api/test-sessions/:id", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTestSession(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Test session not found" });
+      }
+
+      res.json({ message: "Test session deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Test Question routes
+  app.get("/api/test-questions/:sessionId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { sessionId } = req.params;
+      const questions = await storage.getTestQuestionsBySession(sessionId);
+
+      // For trainees, remove correct answers from response
+      if (req.user!.role === 'trainee') {
+        const sanitizedQuestions = questions.map(q => ({
+          ...q,
+          correctAnswer: undefined,
+          explanation: undefined,
+        }));
+        res.json(sanitizedQuestions);
+      } else {
         res.json(questions);
-      } catch (error) {
-        res.status(500).json({ message: "Server error" });
       }
-    },
-  );
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-  app.get(
-    "/api/questions",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const questions = await storage.getAllQuestions();
-        res.json(questions);
-      } catch (error) {
-        res.status(500).json({ message: "Server error" });
+  app.post("/api/test-questions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const questionData = req.body;
+      const question = await storage.createTestQuestion(questionData);
+      res.status(201).json(question);
+    } catch (error) {
+      console.error("Question creation error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  app.put("/api/test-questions/:id", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const question = await storage.updateTestQuestion(id, updates);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
       }
-    },
-  );
 
-  app.post(
-    "/api/questions",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const { date, sessionTitle, questions } = req.body;
+      res.json(question);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
 
-        // Basic validation
-        if (!date || !sessionTitle || !Array.isArray(questions)) {
-          return res.status(400).json({ message: "Invalid request data" });
-        }
+  // Test Attempt routes
+  app.get("/api/test-attempts/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
+      res.json(attempts);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-        // Allow multiple admins to add questions for the same date
-        // Each admin can contribute questions to the same day's test
-        const question = await storage.createQuestion({
-          date,
-          sessionTitle,
-          questions,
-          createdBy: new ObjectId(req.user!.id),
-        });
+  app.get("/api/test-attempts", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const attempts = await storage.getAllTestAttempts();
+      res.json(attempts);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-        res.status(201).json(question);
-      } catch (error) {
-        console.error("Question upload error:", error);
-        res.status(400).json({ message: "Invalid request data" });
-      }
-    },
-  );
+  app.get("/api/test-attempts/session/:sessionId", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { sessionId } = req.params;
+      const attempts = await storage.getTestAttemptsBySession(sessionId);
+      res.json(attempts);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-  app.put(
-    "/api/questions/:id",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const { id } = req.params;
-        const updates = req.body;
+  app.post("/api/test-attempts", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const attemptData = {
+        ...req.body,
+        traineeId: req.user!.id,
+        startedAt: new Date(),
+      };
 
-        const question = await storage.updateQuestion(id, updates);
-        if (!question) {
-          return res.status(404).json({ message: "Question not found" });
-        }
+      // Check if trainee already has an attempt for this session
+      const existingAttempt = await storage.getTestAttemptByTraineeAndSession(
+        req.user!.id,
+        attemptData.sessionId
+      );
 
-        res.json(question);
-      } catch (error) {
-        res.status(400).json({ message: "Invalid request data" });
-      }
-    },
-  );
-
-  app.delete(
-    "/api/questions/:id",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const { id } = req.params;
-        const deleted = await storage.deleteQuestion(id);
-
-        if (!deleted) {
-          return res.status(404).json({ message: "Question not found" });
-        }
-
-        res.json({ message: "Question deleted successfully" });
-      } catch (error) {
-        res.status(500).json({ message: "Server error" });
-      }
-    },
-  );
-
-  // Submission routes
-  app.get(
-    "/api/submissions/my",
-    authenticateToken,
-    async (req: AuthRequest, res) => {
-      try {
-        const submissions = await storage.getSubmissionsByUser(req.user!.id);
-        res.json(submissions);
-      } catch (error) {
-        console.error("Error fetching user submissions:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    },
-  );
-
-  app.get(
-    "/api/submissions",
-    authenticateToken,
-    requireRole(["admin", "superadmin"]),
-    async (req: AuthRequest, res) => {
-      try {
-        const submissions = await storage.getAllSubmissions();
-        res.json(submissions);
-      } catch (error) {
-        console.error("Error fetching all submissions:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    },
-  );
-
-  app.post(
-    "/api/submissions",
-    authenticateToken,
-    requireRole(["trainee"]),
-    async (req: AuthRequest, res) => {
-      try {
-        console.log("Submission request body:", req.body);
-        console.log("User from token:", req.user);
-        
-        const {
-          id,
-          questionSetId,
-          date,
-          sessionTitle,
-          questionAnswers,
-          overallUnderstanding,
-          status,
-          remarks,
-          submittedAt
-        } = req.body;
-
-        // Basic validation
-        if (
-          !questionSetId ||
-          !date ||
-          !sessionTitle ||
-          !Array.isArray(questionAnswers)
-        ) {
-          return res.status(400).json({ message: "Invalid request data" });
-        }
-
-        const userId = req.user!.id;
-        console.log("Processing submission for user ID:", userId);
-
-        // If submission ID is provided, update existing submission
-        if (id) {
-          console.log("Updating existing submission:", id);
-          
-          const updatedSubmission = await storage.updateSubmission(id, {
-            questionSetId: new ObjectId(questionSetId),
-            sessionTitle,
-            questionAnswers,
-            overallUnderstanding: overallUnderstanding || 'Average',
-            status: status || 'Completed',
-            remarks: remarks || '',
-            submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : undefined),
-          });
-
-          if (!updatedSubmission) {
-            return res.status(404).json({ message: "Submission not found" });
+      if (existingAttempt) {
+        // Update existing attempt
+        const updatedAttempt = await storage.updateTestAttempt(
+          existingAttempt._id!.toString(),
+          {
+            answers: attemptData.answers,
+            timeSpent: attemptData.timeSpent,
+            status: 'submitted',
+            submittedAt: new Date(),
           }
-
-          console.log("Submission updated successfully:", updatedSubmission._id);
-          return res.status(200).json(updatedSubmission);
-        }
-
-        // Check if user has already submitted for this question set
-        const existingSubmission = await storage.getSubmissionByUserAndQuestionSet(
-          userId,
-          questionSetId
         );
-
-        if (existingSubmission) {
-          console.log("Found existing submission:", existingSubmission._id);
-          
-          // If submission exists and has been evaluated, don't allow resubmission for completed status
-          if (existingSubmission.evaluation && status === 'Completed') {
-            return res.status(400).json({
-              message: "Test has already been evaluated and cannot be resubmitted",
-            });
-          }
-
-          // Update existing submission
-          const updatedSubmission = await storage.updateSubmission(
-            existingSubmission._id.toString(),
-            {
-              questionSetId: new ObjectId(questionSetId),
-              sessionTitle,
-              questionAnswers,
-              overallUnderstanding: overallUnderstanding || 'Average',
-              status: status || 'Completed',
-              remarks: remarks || '',
-              submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : existingSubmission.submittedAt),
-            },
-          );
-
-          console.log("Existing submission updated:", updatedSubmission?._id);
-          return res.status(200).json(updatedSubmission);
-        }
-
-        // Create new submission if none exists
-        console.log("Creating new submission for user:", userId);
-        
-        const submission = await storage.createSubmission({
-          questionSetId: new ObjectId(questionSetId),
-          date,
-          sessionTitle,
-          questionAnswers,
-          overallUnderstanding: overallUnderstanding || 'Average',
-          status: status || 'Completed',
-          remarks: remarks || '',
-          userId: new ObjectId(userId),
-          submittedAt: submittedAt ? new Date(submittedAt) : (status === 'Completed' ? new Date() : undefined),
-        });
-
-        console.log("New submission created:", submission._id);
-        res.status(201).json(submission);
-      } catch (error) {
-        console.error("Submission validation error:", error);
-        res.status(400).json({ 
-          message: "Invalid request data", 
-          error: error instanceof Error ? error.message : "Unknown error" 
-        });
+        return res.json(updatedAttempt);
       }
-    },
-  );
 
-  app.put(
-    "/api/submissions/:id",
-    authenticateToken,
-    requireRole(["admin", "superadmin"]),
-    async (req: AuthRequest, res) => {
-      try {
-        const { id } = req.params;
-        const updates = req.body;
+      // Create new attempt
+      const attempt = await storage.createTestAttempt({
+        ...attemptData,
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
 
-        console.log("Updating submission:", id);
-        console.log("Update data:", updates);
+      res.status(201).json(attempt);
+    } catch (error) {
+      console.error("Test attempt submission error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
 
-        // If evaluation data is being added, set the evaluatedBy field
-        if (updates.evaluation) {
-          const user = await storage.getUser(req.user!.id);
-          updates.evaluation.evaluatedBy = user?.name || req.user!.email;
-          updates.evaluation.evaluatedAt = new Date().toISOString();
-          updates.status = 'Evaluated'; // Set status to Evaluated when evaluation is added
-        }
+  // Test Evaluation routes
+  app.get("/api/test-evaluations/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const evaluations = await storage.getTestEvaluationsByTrainee(req.user!.id);
+      res.json(evaluations);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-        const submission = await storage.updateSubmission(id, updates);
-        if (!submission) {
-          return res.status(404).json({ message: "Submission not found" });
-        }
+  app.get("/api/test-evaluations", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const evaluations = await storage.getAllTestEvaluations();
+      res.json(evaluations);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-        console.log("Submission updated successfully:", submission._id);
-        res.json(submission);
-      } catch (error) {
-        console.error("Submission update error:", error);
-        res.status(400).json({ message: "Invalid request data" });
-      }
-    },
-  );
+  app.post("/api/test-evaluations", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const evaluationData = {
+        ...req.body,
+        evaluatorId: req.user!.id,
+      };
 
-  app.delete(
-    "/api/submissions/:id",
-    authenticateToken,
-    requireRole(["admin", "superadmin"]),
-    async (req: AuthRequest, res) => {
-      try {
-        const { id } = req.params;
-        const deleted = await storage.deleteSubmission(id);
+      const evaluation = await storage.createTestEvaluation(evaluationData);
 
-        if (!deleted) {
-          return res.status(404).json({ message: "Submission not found" });
-        }
+      // Update the attempt status to 'evaluated'
+      await storage.updateTestAttempt(evaluation.attemptId.toString(), {
+        status: 'evaluated',
+      });
 
-        res.json({ message: "Submission deleted successfully" });
-      } catch (error) {
-        res.status(500).json({ message: "Server error" });
-      }
-    },
-  );
+      res.status(201).json(evaluation);
+    } catch (error) {
+      console.error("Test evaluation error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
 
-  // User management routes (Super Admin only)
+  // User management routes (keeping existing ones)
   app.get(
     "/api/users",
     authenticateToken,
@@ -629,7 +552,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // Trainee management routes (Admin and Super Admin)
   app.get(
     "/api/trainees",
     authenticateToken,
@@ -638,63 +560,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const users = await storage.getAllUsers();
         const trainees = users.filter((user) => user.role === "trainee");
-        const traineesWithoutPasswords = trainees.map(
-          ({ password, ...user }) => user,
-        );
+        const traineesWithoutPasswords = trainees.map(({ password, ...user }) => user);
         res.json(traineesWithoutPasswords);
       } catch (error) {
         res.status(500).json({ message: "Server error" });
       }
-    },
+    }
   );
 
-  // AI Question Generation routes
-  app.post(
-    "/api/ai/generate-questions",
-    authenticateToken,
-    requireRole(["admin", "superadmin"]),
-    async (req: AuthRequest, res) => {
-      try {
-        const { prompt, questionTypes } = req.body;
-        const file = (req as any).file;
-
-        if (!prompt && !file) {
-          return res
-            .status(400)
-            .json({ message: "Either prompt or file is required" });
+    // AI Question Generation routes
+    app.post(
+      "/api/ai/generate-questions",
+      authenticateToken,
+      requireRole(["admin", "superadmin"]),
+      async (req: AuthRequest, res) => {
+        try {
+          const { prompt, questionTypes } = req.body;
+          const file = (req as any).file;
+  
+          if (!prompt && !file) {
+            return res
+              .status(400)
+              .json({ message: "Either prompt or file is required" });
+          }
+  
+          let content = "";
+  
+          // Extract content from PowerPoint if file is provided
+          if (file) {
+            // TODO: Implement actual PowerPoint content extraction
+            content = `PowerPoint content extracted from ${file.originalname}. This would contain the actual slide content, text, and structure.`;
+          }
+  
+          // Use AI service to generate questions
+          const { AIQuestionGenerator } = await import(
+            "./services/ai-question-generator"
+          );
+  
+          const generatedQuestions = await AIQuestionGenerator.generateQuestions({
+            content,
+            prompt,
+            questionTypes: JSON.parse(
+              questionTypes || '["multiple-choice", "text", "true-false"]',
+            ),
+            count: 8,
+          });
+  
+          res.json(generatedQuestions);
+        } catch (error) {
+          console.error("AI question generation error:", error);
+          res.status(500).json({ message: "Failed to generate questions" });
         }
+      },
+    );
 
-        let content = "";
-
-        // Extract content from PowerPoint if file is provided
-        if (file) {
-          // TODO: Implement actual PowerPoint content extraction
-          content = `PowerPoint content extracted from ${file.originalname}. This would contain the actual slide content, text, and structure.`;
-        }
-
-        // Use AI service to generate questions
-        const { AIQuestionGenerator } = await import(
-          "./services/ai-question-generator"
-        );
-
-        const generatedQuestions = await AIQuestionGenerator.generateQuestions({
-          content,
-          prompt,
-          questionTypes: JSON.parse(
-            questionTypes || '["multiple-choice", "text", "true-false"]',
-          ),
-          count: 8,
-        });
-
-        res.json(generatedQuestions);
-      } catch (error) {
-        console.error("AI question generation error:", error);
-        res.status(500).json({ message: "Failed to generate questions" });
-      }
-    },
-  );
-
-  // Q&A routes
+  // Q&A routes (keeping existing ones)
   app.get("/api/qa/questions", authenticateToken, async (req, res) => {
     try {
       const db = await connectToDatabase();
@@ -717,9 +637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = (req as any).user;
 
       if (!title || !content) {
-        return res
-          .status(400)
-          .json({ message: "Title and content are required" });
+        return res.status(400).json({ message: "Title and content are required" });
       }
 
       const db = await connectToDatabase();
@@ -747,47 +665,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post(
-    "/api/qa/questions/:questionId/answers",
-    authenticateToken,
-    async (req, res) => {
-      try {
-        const { questionId } = req.params;
-        const { content } = req.body;
-        const user = (req as any).user;
+  app.post("/api/qa/questions/:questionId/answers", authenticateToken, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const { content } = req.body;
+      const user = (req as any).user;
 
-        if (!content) {
-          return res
-            .status(400)
-            .json({ message: "Answer content is required" });
-        }
-
-        const db = await connectToDatabase();
-        const newAnswer = {
-          _id: new ObjectId(),
-          content: content.trim(),
-          answeredBy: {
-            id: user.id,
-            name: user.name,
-            role: user.role,
-          },
-          createdAt: new Date().toISOString(),
-        };
-
-        await db
-          .collection("qa_questions")
-          .updateOne(
-            { _id: new ObjectId(questionId) },
-            { $push: { answers: newAnswer } },
-          );
-
-        res.status(201).json({ message: "Answer posted successfully" });
-      } catch (error) {
-        console.error("Error posting answer:", error);
-        res.status(500).json({ message: "Failed to post answer" });
+      if (!content) {
+        return res.status(400).json({ message: "Answer content is required" });
       }
-    },
-  );
+
+      const db = await connectToDatabase();
+      const newAnswer = {
+        _id: new ObjectId(),
+        content: content.trim(),
+        answeredBy: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      await db
+        .collection("qa_questions")
+        .updateOne(
+          { _id: new ObjectId(questionId) },
+          { $push: { answers: newAnswer } }
+        );
+
+      res.status(201).json({ message: "Answer posted successfully" });
+    } catch (error) {
+      console.error("Error posting answer:", error);
+      res.status(500).json({ message: "Failed to post answer" });
+    }
+  });
 
   // Health check endpoint
   app.get('/health', (req, res) => {

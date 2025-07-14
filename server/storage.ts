@@ -1,431 +1,308 @@
-
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { ObjectId } from 'mongodb';
-import bcrypt from 'bcryptjs';
-import { connectToDatabase } from './db';
-
-export interface User {
-  _id?: ObjectId;
-  id?: string;
-  name: string;
-  email: string;
-  password: string;
-  role: 'trainee' | 'admin' | 'superadmin';
-  createdAt?: Date;
-}
-
-export interface Question {
-  _id?: ObjectId;
-  id?: string;
-  date: string;
-  sessionTitle: string;
-  questions: Array<{
-    topic: string;
-    question: string;
-    type: string;
-    options?: string[];
-    correctAnswer?: string;
-  }>;
-  createdBy?: ObjectId;
-  createdAt?: Date;
-}
-
-export interface Submission {
-  _id?: ObjectId;
-  id?: string;
-  questionSetId: ObjectId;
-  userId: ObjectId;
-  date: string;
-  sessionTitle: string;
-  questionAnswers: Array<{
-    question: string;
-    type: string;
-    topic: string;
-    answer: string;
-    options?: string[];
-    correctAnswer?: string;
-    score?: number;
-    feedback?: string;
-  }>;
-  overallUnderstanding: string;
-  status: string;
-  remarks?: string;
-  submittedAt?: Date;
-  evaluation?: {
-    totalScore: number;
-    maxScore: number;
-    percentage: number;
-    grade: string;
-    evaluatedBy: string;
-    evaluatedAt: string;
-    overallFeedback?: string;
-    questionFeedback?: Array<{
-      score: number;
-      feedback?: string;
-    }>;
-  };
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { ObjectId } from "mongodb";
+import bcrypt from "bcryptjs";
+import { connectToDatabase } from "./db";
+import {
+  User,
+  TestSession,
+  TestQuestion,
+  TestAttempt,
+  TestEvaluation,
+  PerformanceReport,
+  InsertUser,
+  InsertTestSession,
+  InsertTestQuestion,
+  InsertTestAttempt,
+  InsertTestEvaluation,
+  InsertPerformanceReport,
+  COLLECTIONS,
+} from "@shared/schema";
 
 class Storage {
-  private dataDir = join(process.cwd(), 'server', 'data');
-
-  async initializeDatabase() {
-    try {
-      const db = await connectToDatabase();
-      console.log('Connected to MongoDB successfully');
-
-      // Create indexes for better performance
-      await db.collection('users').createIndex({ email: 1 }, { unique: true });
-      await db.collection('submissions').createIndex({ userId: 1 });
-      await db.collection('submissions').createIndex({ questionSetId: 1 });
-      await db.collection('submissions').createIndex({ date: 1 });
-      await db.collection('questions').createIndex({ date: 1 });
-
-      // Create super admin if none exists
-      await this.createSuperAdminIfNeeded();
-    } catch (error) {
-      console.error('Database initialization error:', error);
-      throw error;
-    }
-  }
-
-  private async createSuperAdminIfNeeded() {
-    try {
-      const db = await connectToDatabase();
-      const superAdmin = await db.collection('users').findOne({ role: 'superadmin' });
-
-      if (!superAdmin) {
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        const superAdminUser = {
-          name: 'Super Admin',
-          email: 'admin@example.com',
-          password: hashedPassword,
-          role: 'superadmin' as const,
-          createdAt: new Date(),
-        };
-
-        await db.collection('users').insertOne(superAdminUser);
-        console.log('Super admin created: admin@example.com / admin123');
-      }
-    } catch (error) {
-      console.error('Error creating super admin:', error);
-    }
-  }
-
   // User methods
-  async getAllUsers(): Promise<User[]> {
+  async createUser(userData: InsertUser): Promise<User> {
     const db = await connectToDatabase();
-    const users = await db.collection('users').find({}).toArray();
-    return users.map(user => ({
-      ...user,
-      id: user._id.toString(),
-    }));
-  }
-
-  async getUser(id: string): Promise<User | null> {
-    try {
-      const db = await connectToDatabase();
-      const user = await db.collection('users').findOne({ _id: new ObjectId(id) });
-      if (!user) return null;
-      
-      return {
-        ...user,
-        id: user._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error getting user:', error);
-      return null;
-    }
-  }
-
-  async getUserByEmail(email: string): Promise<User | null> {
-    try {
-      const db = await connectToDatabase();
-      const user = await db.collection('users').findOne({ email });
-      if (!user) return null;
-      
-      return {
-        ...user,
-        id: user._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error getting user by email:', error);
-      return null;
-    }
-  }
-
-  async createUser(userData: Omit<User, '_id' | 'id' | 'createdAt'>): Promise<User> {
-    const db = await connectToDatabase();
-    
     const hashedPassword = await bcrypt.hash(userData.password, 10);
+
     const user = {
       ...userData,
       password: hashedPassword,
       createdAt: new Date(),
     };
 
-    const result = await db.collection('users').insertOne(user);
-    const createdUser = await db.collection('users').findOne({ _id: result.insertedId });
-    
-    return {
-      ...createdUser,
-      id: createdUser._id.toString(),
-    };
+    const result = await db.collection(COLLECTIONS.USERS).insertOne(user);
+    return { ...user, _id: result.insertedId };
+  }
+
+  async getUser(id: string): Promise<User | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.USERS).findOne({ _id: new ObjectId(id) });
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.USERS).findOne({ email });
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.USERS).find({}).toArray();
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
-    try {
-      const db = await connectToDatabase();
-      const result = await db.collection('users').findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: { ...updates, updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      if (!result) return null;
-
-      return {
-        ...result,
-        id: result._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error updating user:', error);
-      return null;
-    }
+    const db = await connectToDatabase();
+    const result = await db.collection(COLLECTIONS.USERS).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result;
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    try {
-      const db = await connectToDatabase();
-      
-      // Don't allow deleting super admin
-      const user = await this.getUser(id);
-      if (user?.role === 'superadmin') {
-        return false;
-      }
-
-      const result = await db.collection('users').deleteOne({ _id: new ObjectId(id) });
-      return result.deletedCount > 0;
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      return false;
-    }
-  }
-
-  // Question methods
-  async getAllQuestions(): Promise<Question[]> {
     const db = await connectToDatabase();
-    const questions = await db.collection('questions').find({}).sort({ date: -1 }).toArray();
-    return questions.map(q => ({
-      ...q,
-      id: q._id.toString(),
-    }));
+    const result = await db.collection(COLLECTIONS.USERS).deleteOne({ _id: new ObjectId(id) });
+    return result.deletedCount > 0;
   }
 
-  async getQuestionsByDate(date: string): Promise<Question[]> {
+  // Test Session methods
+  async createTestSession(sessionData: InsertTestSession): Promise<TestSession> {
     const db = await connectToDatabase();
-    const questions = await db.collection('questions').find({ date }).toArray();
-    return questions.map(q => ({
-      ...q,
-      id: q._id.toString(),
-    }));
-  }
-
-  async createQuestion(questionData: Omit<Question, '_id' | 'id' | 'createdAt'>): Promise<Question> {
-    const db = await connectToDatabase();
-    
-    const question = {
-      ...questionData,
-      createdAt: new Date(),
-    };
-
-    const result = await db.collection('questions').insertOne(question);
-    const createdQuestion = await db.collection('questions').findOne({ _id: result.insertedId });
-    
-    return {
-      ...createdQuestion,
-      id: createdQuestion._id.toString(),
-    };
-  }
-
-  async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | null> {
-    try {
-      const db = await connectToDatabase();
-      const result = await db.collection('questions').findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: { ...updates, updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      if (!result) return null;
-
-      return {
-        ...result,
-        id: result._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error updating question:', error);
-      return null;
-    }
-  }
-
-  async deleteQuestion(id: string): Promise<boolean> {
-    try {
-      const db = await connectToDatabase();
-      const result = await db.collection('questions').deleteOne({ _id: new ObjectId(id) });
-      return result.deletedCount > 0;
-    } catch (error) {
-      console.error('Error deleting question:', error);
-      return false;
-    }
-  }
-
-  // Submission methods
-  async getAllSubmissions(): Promise<Submission[]> {
-    const db = await connectToDatabase();
-    const submissions = await db.collection('submissions').find({}).sort({ submittedAt: -1 }).toArray();
-    return submissions.map(s => ({
-      ...s,
-      id: s._id.toString(),
-    }));
-  }
-
-  async getSubmissionsByUser(userId: string): Promise<Submission[]> {
-    try {
-      const db = await connectToDatabase();
-      console.log('Getting submissions for user ID:', userId);
-      
-      const submissions = await db.collection('submissions').find({ 
-        userId: new ObjectId(userId) 
-      }).sort({ submittedAt: -1 }).toArray();
-      
-      console.log('Found submissions:', submissions.length);
-      
-      return submissions.map(s => ({
-        ...s,
-        id: s._id.toString(),
-      }));
-    } catch (error) {
-      console.error('Error getting submissions by user:', error);
-      return [];
-    }
-  }
-
-  async getSubmissionByUserAndDate(userId: string, date: string): Promise<Submission | null> {
-    try {
-      const db = await connectToDatabase();
-      const submission = await db.collection('submissions').findOne({ 
-        userId: new ObjectId(userId),
-        date: date
-      });
-      
-      if (!submission) return null;
-      
-      return {
-        ...submission,
-        id: submission._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error getting submission by user and date:', error);
-      return null;
-    }
-  }
-
-  async getSubmissionByUserAndQuestionSet(userId: string, questionSetId: string): Promise<Submission | null> {
-    try {
-      const db = await connectToDatabase();
-      console.log('Looking for submission - User ID:', userId, 'Question Set ID:', questionSetId);
-      
-      const submission = await db.collection('submissions').findOne({ 
-        userId: new ObjectId(userId),
-        questionSetId: new ObjectId(questionSetId)
-      });
-      
-      if (!submission) {
-        console.log('No existing submission found');
-        return null;
-      }
-      
-      console.log('Found existing submission:', submission._id);
-      
-      return {
-        ...submission,
-        id: submission._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error getting submission by user and question set:', error);
-      return null;
-    }
-  }
-
-  async createSubmission(submissionData: Omit<Submission, '_id' | 'id' | 'createdAt' | 'updatedAt'>): Promise<Submission> {
-    const db = await connectToDatabase();
-    
-    console.log('Creating submission with data:', {
-      ...submissionData,
-      userId: submissionData.userId.toString(),
-      questionSetId: submissionData.questionSetId.toString()
-    });
-    
-    const submission = {
-      ...submissionData,
+    const session = {
+      ...sessionData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    const result = await db.collection('submissions').insertOne(submission);
-    const createdSubmission = await db.collection('submissions').findOne({ _id: result.insertedId });
-    
-    console.log('Submission created with ID:', createdSubmission._id);
-    
-    return {
-      ...createdSubmission,
-      id: createdSubmission._id.toString(),
+    const result = await db.collection(COLLECTIONS.TEST_SESSIONS).insertOne(session);
+    return { ...session, _id: result.insertedId };
+  }
+
+  async getTestSession(id: string): Promise<TestSession | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_SESSIONS).findOne({ _id: new ObjectId(id) });
+  }
+
+  async getAllTestSessions(): Promise<TestSession[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_SESSIONS)
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  async getActiveTestSessions(): Promise<TestSession[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_SESSIONS)
+      .find({ status: 'active' })
+      .sort({ date: 1 })
+      .toArray();
+  }
+
+  async updateTestSession(id: string, updates: Partial<TestSession>): Promise<TestSession | null> {
+    const db = await connectToDatabase();
+    const result = await db.collection(COLLECTIONS.TEST_SESSIONS).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { ...updates, updatedAt: new Date() } },
+      { returnDocument: "after" }
+    );
+    return result;
+  }
+
+  async deleteTestSession(id: string): Promise<boolean> {
+    const db = await connectToDatabase();
+    // Also delete related questions, attempts, and evaluations
+    await db.collection(COLLECTIONS.TEST_QUESTIONS).deleteMany({ sessionId: new ObjectId(id) });
+    await db.collection(COLLECTIONS.TEST_ATTEMPTS).deleteMany({ sessionId: new ObjectId(id) });
+    await db.collection(COLLECTIONS.TEST_EVALUATIONS).deleteMany({ sessionId: new ObjectId(id) });
+
+    const result = await db.collection(COLLECTIONS.TEST_SESSIONS).deleteOne({ _id: new ObjectId(id) });
+    return result.deletedCount > 0;
+  }
+
+  // Test Question methods
+  async createTestQuestion(questionData: InsertTestQuestion): Promise<TestQuestion> {
+    const db = await connectToDatabase();
+    const question = {
+      ...questionData,
+      sessionId: new ObjectId(questionData.sessionId),
+      createdAt: new Date(),
     };
+
+    const result = await db.collection(COLLECTIONS.TEST_QUESTIONS).insertOne(question);
+    return { ...question, _id: result.insertedId };
   }
 
-  async updateSubmission(id: string, updates: Partial<Submission>): Promise<Submission | null> {
-    try {
-      const db = await connectToDatabase();
-      
-      console.log('Updating submission ID:', id);
-      console.log('Update data:', updates);
-      
-      const result = await db.collection('submissions').findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: { ...updates, updatedAt: new Date() } },
-        { returnDocument: 'after' }
-      );
-
-      if (!result) {
-        console.log('Submission not found for update');
-        return null;
-      }
-
-      console.log('Submission updated successfully');
-      
-      return {
-        ...result,
-        id: result._id.toString(),
-      };
-    } catch (error) {
-      console.error('Error updating submission:', error);
-      return null;
-    }
+  async getTestQuestionsBySession(sessionId: string): Promise<TestQuestion[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_QUESTIONS)
+      .find({ sessionId: new ObjectId(sessionId) })
+      .sort({ questionNumber: 1 })
+      .toArray();
   }
 
-  async deleteSubmission(id: string): Promise<boolean> {
-    try {
-      const db = await connectToDatabase();
-      const result = await db.collection('submissions').deleteOne({ _id: new ObjectId(id) });
-      return result.deletedCount > 0;
-    } catch (error) {
-      console.error('Error deleting submission:', error);
-      return false;
+  async updateTestQuestion(id: string, updates: Partial<TestQuestion>): Promise<TestQuestion | null> {
+    const db = await connectToDatabase();
+    const result = await db.collection(COLLECTIONS.TEST_QUESTIONS).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result;
+  }
+
+  async deleteTestQuestion(id: string): Promise<boolean> {
+    const db = await connectToDatabase();
+    const result = await db.collection(COLLECTIONS.TEST_QUESTIONS).deleteOne({ _id: new ObjectId(id) });
+    return result.deletedCount > 0;
+  }
+
+  // Test Attempt methods
+  async createTestAttempt(attemptData: InsertTestAttempt): Promise<TestAttempt> {
+    const db = await connectToDatabase();
+    const attempt = {
+      ...attemptData,
+      sessionId: new ObjectId(attemptData.sessionId),
+      traineeId: new ObjectId(attemptData.traineeId),
+      answers: attemptData.answers.map(answer => ({
+        ...answer,
+        questionId: new ObjectId(answer.questionId),
+      })),
+    };
+
+    const result = await db.collection(COLLECTIONS.TEST_ATTEMPTS).insertOne(attempt);
+    return { ...attempt, _id: result.insertedId };
+  }
+
+  async getTestAttempt(id: string): Promise<TestAttempt | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOne({ _id: new ObjectId(id) });
+  }
+
+  async getTestAttemptsByTrainee(traineeId: string): Promise<TestAttempt[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+      .find({ traineeId: new ObjectId(traineeId) })
+      .sort({ startedAt: -1 })
+      .toArray();
+  }
+
+  async getTestAttemptsBySession(sessionId: string): Promise<TestAttempt[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+      .find({ sessionId: new ObjectId(sessionId) })
+      .sort({ submittedAt: -1 })
+      .toArray();
+  }
+
+  async getAllTestAttempts(): Promise<TestAttempt[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+      .find({})
+      .sort({ submittedAt: -1 })
+      .toArray();
+  }
+
+  async getTestAttemptByTraineeAndSession(traineeId: string, sessionId: string): Promise<TestAttempt | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOne({
+      traineeId: new ObjectId(traineeId),
+      sessionId: new ObjectId(sessionId),
+    });
+  }
+
+  async updateTestAttempt(id: string, updates: Partial<TestAttempt>): Promise<TestAttempt | null> {
+    const db = await connectToDatabase();
+    const processedUpdates = { ...updates };
+    if (updates.answers) {
+      processedUpdates.answers = updates.answers.map(answer => ({
+        ...answer,
+        questionId: new ObjectId(answer.questionId),
+      }));
     }
+
+    const result = await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: processedUpdates },
+      { returnDocument: "after" }
+    );
+    return result;
+  }
+
+  // Test Evaluation methods
+  async createTestEvaluation(evaluationData: InsertTestEvaluation): Promise<TestEvaluation> {
+    const db = await connectToDatabase();
+    const evaluation = {
+      ...evaluationData,
+      attemptId: new ObjectId(evaluationData.attemptId),
+      sessionId: new ObjectId(evaluationData.sessionId),
+      traineeId: new ObjectId(evaluationData.traineeId),
+      evaluatorId: new ObjectId(evaluationData.evaluatorId),
+      questionEvaluations: evaluationData.questionEvaluations.map(qe => ({
+        ...qe,
+        questionId: new ObjectId(qe.questionId),
+      })),
+      evaluatedAt: new Date(),
+    };
+
+    const result = await db.collection(COLLECTIONS.TEST_EVALUATIONS).insertOne(evaluation);
+    return { ...evaluation, _id: result.insertedId };
+  }
+
+  async getTestEvaluation(id: string): Promise<TestEvaluation | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOne({ _id: new ObjectId(id) });
+  }
+
+  async getTestEvaluationByAttempt(attemptId: string): Promise<TestEvaluation | null> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOne({ attemptId: new ObjectId(attemptId) });
+  }
+
+  async getTestEvaluationsByTrainee(traineeId: string): Promise<TestEvaluation[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_EVALUATIONS)
+      .find({ traineeId: new ObjectId(traineeId) })
+      .sort({ evaluatedAt: -1 })
+      .toArray();
+  }
+
+  async getAllTestEvaluations(): Promise<TestEvaluation[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.TEST_EVALUATIONS)
+      .find({})
+      .sort({ evaluatedAt: -1 })
+      .toArray();
+  }
+
+  async updateTestEvaluation(id: string, updates: Partial<TestEvaluation>): Promise<TestEvaluation | null> {
+    const db = await connectToDatabase();
+    const result = await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result;
+  }
+
+  // Performance Report methods
+  async createPerformanceReport(reportData: InsertPerformanceReport): Promise<PerformanceReport> {
+    const db = await connectToDatabase();
+    const report = {
+      ...reportData,
+      traineeId: new ObjectId(reportData.traineeId),
+      generatedAt: new Date(),
+    };
+
+    const result = await db.collection(COLLECTIONS.PERFORMANCE_REPORTS).insertOne(report);
+    return { ...report, _id: result.insertedId };
+  }
+
+  async getPerformanceReportsByTrainee(traineeId: string): Promise<PerformanceReport[]> {
+    const db = await connectToDatabase();
+    return await db.collection(COLLECTIONS.PERFORMANCE_REPORTS)
+      .find({ traineeId: new ObjectId(traineeId) })
+      .sort({ generatedAt: -1 })
+      .toArray();
   }
 }
 
