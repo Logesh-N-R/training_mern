@@ -302,23 +302,41 @@ class Storage {
     const db = await connectToDatabase();
 
     try {
-      // Create indexes for better performance
-      await db.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
-      await db.collection(COLLECTIONS.TRAINEES).createIndex({ traineeId: 1 });
-      await db.collection(COLLECTIONS.SUBMISSIONS).createIndex({ userId: 1 });
-      await db.collection(COLLECTIONS.SUBMISSIONS).createIndex({ submittedAt: -1 });
-      await db.collection(COLLECTIONS.QUESTIONS).createIndex({ title: 1 });
-      await db.collection(COLLECTIONS.QA_POSTS).createIndex({ createdAt: -1 });
-      await db.collection(COLLECTIONS.QA_POSTS).createIndex({ authorId: 1 });
-      await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ date: 1 });
-      await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ status: 1 });
-      await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ traineeId: 1 });
-      await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ sessionId: 1 });
-      await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ attemptId: 1 });
+      // Create indexes for better performance - only for collections that actually exist
+      const collections = ['users', 'test_sessions', 'test_attempts', 'test_evaluations', 'test_questions', 'performance_reports'];
+      
+      for (const collectionName of collections) {
+        try {
+          switch (collectionName) {
+            case 'users':
+              await db.collection(collectionName).createIndex({ email: 1 }, { unique: true });
+              break;
+            case 'test_sessions':
+              await db.collection(collectionName).createIndex({ date: 1 });
+              await db.collection(collectionName).createIndex({ status: 1 });
+              break;
+            case 'test_attempts':
+              await db.collection(collectionName).createIndex({ traineeId: 1 });
+              await db.collection(collectionName).createIndex({ sessionId: 1 });
+              break;
+            case 'test_evaluations':
+              await db.collection(collectionName).createIndex({ attemptId: 1 });
+              break;
+            case 'test_questions':
+              await db.collection(collectionName).createIndex({ sessionId: 1 });
+              break;
+            case 'performance_reports':
+              await db.collection(collectionName).createIndex({ traineeId: 1 });
+              break;
+          }
+        } catch (indexError) {
+          console.warn(`Failed to create index for ${collectionName}:`, indexError.message);
+        }
+      }
 
-      console.log('Database indexes created successfully');
+      console.log('Database initialization completed');
     } catch (error) {
-      console.error('Error creating database indexes:', error);
+      console.error('Error during database initialization:', error);
     }
   }
 }
