@@ -1,29 +1,16 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Clock, Send, CheckCircle, AlertCircle, Trophy, Star } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-
-interface TestSession {
-  _id: string;
-  title: string;
-  description: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  status: 'draft' | 'active' | 'completed' | 'archived';
-  createdAt: string;
-}
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
+import { Progress } from './ui/progress';
+import { useToast } from '../hooks/use-toast';
+import { ApiService } from '../services/api';
+import { Clock, Save, Send, AlertCircle } from 'lucide-react';
 
 interface TestQuestion {
   _id: string;
@@ -31,7 +18,7 @@ interface TestQuestion {
   questionNumber: number;
   category: string;
   question: string;
-  type: 'multiple-choice' | 'single-choice' | 'text-input' | 'essay' | 'true-false';
+  type: 'multiple-choice' | 'text-input' | 'true-false';
   options?: string[];
   correctAnswer?: string | number;
   points: number;
@@ -45,9 +32,6 @@ interface TestAnswer {
   questionNumber: number;
   answer: string | number | string[];
   timeSpent: number;
-  isCorrect?: boolean;
-  score?: number;
-  feedback?: string;
 }
 
 interface TestAttempt {
@@ -56,154 +40,173 @@ interface TestAttempt {
   traineeId: string;
   startedAt: string;
   submittedAt?: string;
-  status: 'in-progress' | 'submitted' | 'evaluated' | 'expired';
+  status: 'in-progress' | 'submitted' | 'evaluated';
   answers: TestAnswer[];
   timeSpent: number;
 }
 
-interface TestEvaluation {
-  _id: string;
-  attemptId: string;
-  sessionId: string;
-  traineeId: string;
-  evaluatorId: string;
-  totalScore: number;
-  maxScore: number;
-  percentage: number;
-  grade: 'A+' | 'A' | 'B+' | 'B' | 'C+' | 'C' | 'D' | 'F';
-  overallFeedback: string;
-  questionFeedback?: string[];
-  createdAt: string;
-}
-
 interface TestFormProps {
-  session: TestSession;
-  questions: TestQuestion[];
+  sessionId: string;
   existingAttempt?: TestAttempt;
-  existingEvaluation?: TestEvaluation;
-  onSubmit: (answers: TestAnswer[], timeSpent: number) => void;
-  viewOnly?: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
 }
 
-export function TestForm({ 
-  session, 
-  questions, 
-  existingAttempt, 
-  existingEvaluation, 
-  onSubmit, 
-  viewOnly = false 
-}: TestFormProps) {
-  const { user } = useAuth();
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeRemaining, setTimeRemaining] = useState(session.duration * 60); // Convert minutes to seconds
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [questionTimeSpent, setQuestionTimeSpent] = useState<Record<string, number>>({});
+export function TestForm({ sessionId, existingAttempt, onClose, onSubmit }: TestFormProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Initialize form with existing attempt data
+  // Timer state
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+
+  // Form state
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Map<string, TestAnswer>>(new Map());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch questions for this session
+  const { data: questions = [], isLoading } = useQuery({
+    queryKey: [`/api/test-questions/${sessionId}`],
+    queryFn: () => ApiService.get(`/api/test-questions/${sessionId}`),
+  });
+
+  // Initialize timer and answers from existing attempt
   useEffect(() => {
     if (existingAttempt) {
-      const attemptAnswers: Record<string, string> = {};
-      let totalTimeSpent = 0;
-      const questionTimes: Record<string, number> = {};
+      setTimeElapsed(existingAttempt.timeSpent || 0);
 
-      existingAttempt.answers.forEach((answer) => {
-        attemptAnswers[answer.questionId] = String(answer.answer);
-        questionTimes[answer.questionId] = answer.timeSpent;
-        totalTimeSpent += answer.timeSpent;
+      // Load existing answers
+      const answerMap = new Map<string, TestAnswer>();
+      existingAttempt.answers.forEach(answer => {
+        answerMap.set(answer.questionId, answer);
       });
-
-      setAnswers(attemptAnswers);
-      setTimeSpent(totalTimeSpent);
-      setQuestionTimeSpent(questionTimes);
-
-      // Adjust remaining time if continuing an in-progress test
-      if (existingAttempt.status === 'in-progress') {
-        const elapsed = Math.floor((new Date().getTime() - new Date(existingAttempt.startedAt).getTime()) / 1000);
-        setTimeRemaining(Math.max(0, session.duration * 60 - elapsed));
-      }
+      setAnswers(answerMap);
     }
-  }, [existingAttempt, session.duration]);
+  }, [existingAttempt]);
 
-  // Timer effect (disabled in view-only mode or for completed tests)
+  // Timer effect
   useEffect(() => {
-    if (viewOnly || existingAttempt?.status === 'submitted' || existingAttempt?.status === 'evaluated') {
-      return;
-    }
+    if (isSubmitting) return;
 
-    if (timeRemaining > 0) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(timeRemaining - 1);
-        setTimeSpent(prev => prev + 1);
-        
-        // Track time spent on current question
-        const currentQuestion = questions[currentQuestionIndex];
-        if (currentQuestion) {
-          setQuestionTimeSpent(prev => ({
-            ...prev,
-            [currentQuestion._id]: (prev[currentQuestion._id] || 0) + 1
-          }));
-        }
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (timeRemaining === 0 && !isSubmitting) {
-      handleAutoSubmit();
-    }
-  }, [timeRemaining, currentQuestionIndex, questions, viewOnly, existingAttempt, isSubmitting]);
+    const timer = setInterval(() => {
+      setTimeElapsed(prev => prev + 1);
+    }, 1000);
 
-  const handleAutoSubmit = useCallback(() => {
-    if (!viewOnly && !isSubmitting) {
-      toast({
-        title: "Time's Up!",
-        description: "Your test has been automatically submitted.",
-        variant: "destructive",
-      });
-      handleSubmit(true);
-    }
-  }, [viewOnly, isSubmitting]);
+    return () => clearInterval(timer);
+  }, [isSubmitting]);
 
-  const handleAnswerChange = (questionId: string, answer: string) => {
-    if (viewOnly || existingAttempt?.status === 'submitted' || existingAttempt?.status === 'evaluated') {
-      return;
-    }
-
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
-  };
-
-  const handleSubmit = async (isAutoSubmit = false) => {
-    if (isSubmitting || viewOnly) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const testAnswers: TestAnswer[] = questions.map((question) => ({
-        questionId: question._id,
-        questionNumber: question.questionNumber,
-        answer: answers[question._id] || '',
-        timeSpent: questionTimeSpent[question._id] || 0,
-      }));
-
-      await onSubmit(testAnswers, timeSpent);
-
-      if (!isAutoSubmit) {
-        toast({
-          title: "Success",
-          description: "Your test has been submitted successfully!",
+  // Auto-save mutation
+  const autoSaveMutation = useMutation({
+    mutationFn: (data: any) => {
+      if (existingAttempt) {
+        return ApiService.put(`/api/test-attempts/${existingAttempt._id}`, data);
+      } else {
+        return ApiService.post('/api/test-attempts', {
+          sessionId,
+          ...data,
+          status: 'in-progress',
         });
       }
-    } catch (error) {
-      console.error('Submission error:', error);
+    },
+    onError: (error: any) => {
+      console.error('Auto-save error:', error);
+    },
+  });
+
+  // Submit mutation
+  const submitMutation = useMutation({
+    mutationFn: (data: any) => {
+      if (existingAttempt) {
+        return ApiService.put(`/api/test-attempts/${existingAttempt._id}`, {
+          ...data,
+          status: 'submitted',
+          submittedAt: new Date().toISOString(),
+        });
+      } else {
+        return ApiService.post('/api/test-attempts', {
+          sessionId,
+          ...data,
+          status: 'submitted',
+          submittedAt: new Date().toISOString(),
+        });
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Test submitted successfully!",
+      });
+      onSubmit();
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to submit test. Please try again.",
+        description: error.response?.data?.message || "Failed to submit test",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
+    },
+  });
+
+  const handleAnswerChange = (questionId: string, questionNumber: number, answer: string | number | string[]) => {
+    const now = Date.now();
+    const timeSpentOnQuestion = Math.floor((now - questionStartTime) / 1000);
+
+    const newAnswer: TestAnswer = {
+      questionId,
+      questionNumber,
+      answer,
+      timeSpent: timeSpentOnQuestion,
+    };
+
+    setAnswers(prev => new Map(prev.set(questionId, newAnswer)));
+    setQuestionStartTime(now);
+
+    // Auto-save after a delay
+    setTimeout(() => {
+      autoSave();
+    }, 1000);
+  };
+
+  const autoSave = () => {
+    const answersArray = Array.from(answers.values());
+    autoSaveMutation.mutate({
+      answers: answersArray,
+      timeSpent: timeElapsed,
+    });
+  };
+
+  const handleSubmit = () => {
+    if (questions.length === 0) {
+      toast({
+        title: "Error",
+        description: "No questions found for this test",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const answersArray = Array.from(answers.values());
+
+    submitMutation.mutate({
+      answers: answersArray,
+      timeSpent: timeElapsed,
+    });
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+      setQuestionStartTime(Date.now());
+    }
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setQuestionStartTime(Date.now());
     }
   };
 
@@ -211,375 +214,212 @@ export function TestForm({
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'hard':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const renderQuestionInput = (question: TestQuestion) => {
+    const currentAnswer = answers.get(question._id);
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A+':
-      case 'A':
-        return 'bg-green-100 text-green-800';
-      case 'B+':
-      case 'B':
-        return 'bg-blue-100 text-blue-800';
-      case 'C+':
-      case 'C':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'D':
-        return 'bg-orange-100 text-orange-800';
-      case 'F':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const renderQuestion = (question: TestQuestion, index: number) => {
-    const currentAnswer = answers[question._id] || '';
-    const isCompleted = existingAttempt?.status === 'submitted' || existingAttempt?.status === 'evaluated';
-    const canEdit = !viewOnly && !isCompleted;
-
-    // Show correct answer and explanation in view mode for evaluated tests
-    const showCorrectAnswer = viewOnly && existingEvaluation && question.correctAnswer;
-    const isCorrect = existingEvaluation ? currentAnswer === question.correctAnswer : false;
-
-    return (
-      <Card key={question._id} className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <Badge variant="outline">{question.category}</Badge>
-                <Badge className={getDifficultyColor(question.difficulty)} variant="secondary">
-                  {question.difficulty}
-                </Badge>
-                <Badge variant="secondary" className="capitalize">
-                  {question.type.replace('-', ' ')}
-                </Badge>
-                <span className="text-sm text-slate-500">
-                  {question.points} points
-                </span>
+    switch (question.type) {
+      case 'multiple-choice':
+        return (
+          <RadioGroup
+            value={currentAnswer?.answer as string || ''}
+            onValueChange={(value) => handleAnswerChange(question._id, question.questionNumber, value)}
+          >
+            {question.options?.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`option-${index}`} />
+                <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                  {option}
+                </Label>
               </div>
-              <CardTitle className="text-lg font-medium">
-                {index + 1}. {question.question}
-              </CardTitle>
+            ))}
+          </RadioGroup>
+        );
+
+      case 'true-false':
+        return (
+          <RadioGroup
+            value={currentAnswer?.answer as string || ''}
+            onValueChange={(value) => handleAnswerChange(question._id, question.questionNumber, value)}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="true" id="true" />
+              <Label htmlFor="true" className="cursor-pointer">True</Label>
             </div>
             <div className="flex items-center space-x-2">
-              {currentAnswer && (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              )}
-              {existingEvaluation && (
-                <div className="flex items-center space-x-1">
-                  {isCorrect ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {existingEvaluation.questionFeedback?.[index] ? 
-                      `${Math.round((question.points / existingEvaluation.maxScore) * existingEvaluation.totalScore)}/${question.points}` : 
-                      isCorrect ? `${question.points}/${question.points}` : `0/${question.points}`
-                    }
-                  </span>
-                </div>
-              )}
+              <RadioGroupItem value="false" id="false" />
+              <Label htmlFor="false" className="cursor-pointer">False</Label>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Answer Input */}
-            {question.type === 'multiple-choice' || question.type === 'single-choice' ? (
-              <RadioGroup
-                value={currentAnswer}
-                onValueChange={(value) => canEdit && handleAnswerChange(question._id, value)}
-                className="space-y-2"
-                disabled={!canEdit}
-              >
-                {question.options?.map((option, optionIndex) => (
-                  <div key={optionIndex} className="flex items-center space-x-2">
-                    <RadioGroupItem 
-                      value={option} 
-                      id={`q${question._id}-${optionIndex}`} 
-                      disabled={!canEdit}
-                    />
-                    <Label 
-                      htmlFor={`q${question._id}-${optionIndex}`} 
-                      className={`flex-1 ${canEdit ? 'cursor-pointer' : 'cursor-default'} ${
-                        showCorrectAnswer && option === question.correctAnswer ? 'text-green-600 font-medium' : ''
-                      } ${
-                        showCorrectAnswer && currentAnswer === option && option !== question.correctAnswer ? 'text-red-600' : ''
-                      }`}
-                    >
-                      {option}
-                      {showCorrectAnswer && option === question.correctAnswer && (
-                        <Badge className="ml-2 bg-green-100 text-green-800">Correct</Badge>
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : question.type === 'true-false' ? (
-              <RadioGroup
-                value={currentAnswer}
-                onValueChange={(value) => canEdit && handleAnswerChange(question._id, value)}
-                className="space-y-2"
-                disabled={!canEdit}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="True" id={`q${question._id}-true`} disabled={!canEdit} />
-                  <Label 
-                    htmlFor={`q${question._id}-true`} 
-                    className={`${canEdit ? 'cursor-pointer' : 'cursor-default'} ${
-                      showCorrectAnswer && 'True' === question.correctAnswer ? 'text-green-600 font-medium' : ''
-                    }`}
-                  >
-                    True
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="False" id={`q${question._id}-false`} disabled={!canEdit} />
-                  <Label 
-                    htmlFor={`q${question._id}-false`} 
-                    className={`${canEdit ? 'cursor-pointer' : 'cursor-default'} ${
-                      showCorrectAnswer && 'False' === question.correctAnswer ? 'text-green-600 font-medium' : ''
-                    }`}
-                  >
-                    False
-                  </Label>
-                </div>
-              </RadioGroup>
-            ) : question.type === 'essay' || question.type === 'text-input' ? (
-              <Textarea
-                value={currentAnswer}
-                onChange={(e) => canEdit && handleAnswerChange(question._id, e.target.value)}
-                placeholder="Enter your answer..."
-                className="min-h-[100px] resize-none"
-                disabled={!canEdit}
-              />
-            ) : (
-              <Input
-                value={currentAnswer}
-                onChange={(e) => canEdit && handleAnswerChange(question._id, e.target.value)}
-                placeholder="Enter your answer..."
-                disabled={!canEdit}
-              />
-            )}
+          </RadioGroup>
+        );
 
-            {/* Show explanation in view mode */}
-            {showCorrectAnswer && question.explanation && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Explanation:</strong> {question.explanation}
-                </AlertDescription>
-              </Alert>
-            )}
+      case 'text-input':
+        return (
+          <Textarea
+            value={currentAnswer?.answer as string || ''}
+            onChange={(e) => handleAnswerChange(question._id, question.questionNumber, e.target.value)}
+            placeholder="Type your answer here..."
+            rows={4}
+            className="w-full"
+          />
+        );
 
-            {/* Show individual feedback if available */}
-            {existingEvaluation?.questionFeedback?.[index] && (
-              <Alert>
-                <Star className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Feedback:</strong> {existingEvaluation.questionFeedback[index]}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
+      default:
+        return <div>Unsupported question type</div>;
+    }
   };
 
-  const answeredQuestions = Object.keys(answers).filter(key => answers[key]?.trim()).length;
-  const totalQuestions = questions.length;
-  const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-lg text-muted-foreground">No questions found for this test.</p>
+        <Button onClick={onClose} className="mt-4">Close</Button>
+      </div>
+    );
+  }
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const answeredQuestions = Array.from(answers.keys()).length;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl text-slate-800">
-                {session.title}
-              </CardTitle>
-              <p className="text-slate-600 mt-1">
-                {session.description}
-              </p>
-              <p className="text-sm text-slate-500 mt-2">
-                Date: {new Date(session.date).toLocaleDateString()} • 
-                Duration: {session.duration} minutes • 
-                {totalQuestions} questions
-              </p>
-            </div>
-            <div className="text-right">
-              {!viewOnly && !existingAttempt?.submittedAt && (
-                <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600' : 'text-blue-600'}`}>
-                    {formatTime(timeRemaining)}
-                  </span>
-                </div>
-              )}
-              <Badge variant={existingAttempt?.status === 'submitted' || existingAttempt?.status === 'evaluated' ? "default" : "secondary"}>
-                {existingAttempt?.status === 'submitted' ? 'Submitted' :
-                 existingAttempt?.status === 'evaluated' ? 'Evaluated' : 
-                 'In Progress'}
-              </Badge>
-            </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              Time: {formatTime(timeElapsed)}
+            </span>
           </div>
-        </CardHeader>
-      </Card>
+          <div className="text-sm text-muted-foreground">
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Answered: {answeredQuestions}/{questions.length}
+          </div>
+        </div>
+
+        {autoSaveMutation.isPending && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Save className="w-4 h-4 animate-pulse" />
+            Saving...
+          </div>
+        )}
+      </div>
 
       {/* Progress */}
+      <Progress value={progress} className="w-full" />
+
+      {/* Question */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-600">Progress</span>
-            <span className="text-sm font-medium">{answeredQuestions}/{totalQuestions} Questions</span>
+        <CardHeader>
+          <CardTitle className="flex items-start justify-between">
+            <span>Question {currentQuestion.questionNumber}</span>
+            <div className="text-sm text-muted-foreground">
+              {currentQuestion.points} points • {currentQuestion.difficulty}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-lg">{currentQuestion.question}</div>
+
+          {currentQuestion.category && (
+            <div className="text-sm text-muted-foreground">
+              Category: {currentQuestion.category}
+            </div>
+          )}
+
+          <div className="mt-6">
+            {renderQuestionInput(currentQuestion)}
           </div>
-          <Progress value={progress} className="w-full" />
         </CardContent>
       </Card>
 
-      {/* Evaluation Results */}
-      {existingEvaluation && (
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader>
-            <CardTitle className="flex items-center text-green-800">
-              <Trophy className="w-5 h-5 mr-2" />
-              Test Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {existingEvaluation.percentage}%
-                </div>
-                <div className="text-sm text-slate-600">Score</div>
-              </div>
-              <div className="text-center">
-                <Badge className={`${getGradeColor(existingEvaluation.grade)} text-lg px-3 py-1`}>
-                  {existingEvaluation.grade}
-                </Badge>
-                <div className="text-sm text-slate-600 mt-1">Grade</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-900">
-                  {existingEvaluation.totalScore}
-                </div>
-                <div className="text-sm text-slate-600">
-                  out of {existingEvaluation.maxScore}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-medium text-slate-900">
-                  {Math.floor(timeSpent / 60)}m {timeSpent % 60}s
-                </div>
-                <div className="text-sm text-slate-600">Time Taken</div>
-              </div>
-            </div>
-            {existingEvaluation.overallFeedback && (
-              <Alert>
-                <Star className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Overall Feedback:</strong> {existingEvaluation.overallFeedback}
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={handlePrevious}
+          disabled={currentQuestionIndex === 0}
+        >
+          Previous
+        </Button>
 
-      {/* Questions */}
-      <div className="space-y-6">
-        {questions.map((question, index) => renderQuestion(question, index))}
+        <div className="flex gap-2">
+          {currentQuestionIndex === questions.length - 1 ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || answeredQuestions === 0}
+              className="flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              {isSubmitting ? 'Submitting...' : 'Submit Test'}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleNext}
+              disabled={currentQuestionIndex === questions.length - 1}
+            >
+              Next
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Submit Button */}
-      {!viewOnly && !existingAttempt?.submittedAt && (
-        <Card>
-          <CardContent className="pt-6">
-            {timeRemaining < 300 && timeRemaining > 0 && (
-              <Alert className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Warning: Less than 5 minutes remaining! Your test will auto-submit when time runs out.
-                </AlertDescription>
-              </Alert>
-            )}
+      {/* Question Navigator */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Question Navigator</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-10 gap-2">
+            {questions.map((_, index) => {
+              const isAnswered = Array.from(answers.keys()).some(id => 
+                questions[index] && questions[index]._id === id
+              );
+              const isCurrent = index === currentQuestionIndex;
 
-            <div className="flex justify-center">
-              <Button 
-                onClick={() => handleSubmit()} 
-                disabled={isSubmitting || answeredQuestions === 0}
-                className="w-full max-w-md"
-                size="lg"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit Test ({answeredQuestions}/{totalQuestions} answered)
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <p className="text-center text-sm text-slate-500 mt-3">
-              Make sure to review your answers before submitting. You cannot change them once submitted.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Completion Status */}
-      {(existingAttempt?.submittedAt || viewOnly) && (
-        <Card>
-          <CardContent className="pt-6">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                {viewOnly 
-                  ? "This is a read-only view of your submitted test."
-                  : "Your test has been submitted successfully! You can no longer make changes."
-                }
-                {existingAttempt?.submittedAt && (
-                  <span className="block mt-1 text-sm">
-                    Submitted on: {new Date(existingAttempt.submittedAt).toLocaleString()}
-                  </span>
-                )}
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setCurrentQuestionIndex(index);
+                    setQuestionStartTime(Date.now());
+                  }}
+                  className={`
+                    h-8 w-8 rounded text-xs font-medium transition-colors
+                    ${isCurrent 
+                      ? 'bg-primary text-primary-foreground' 
+                      : isAnswered 
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }
+                  `}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-export default TestForm;

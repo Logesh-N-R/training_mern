@@ -278,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessions = await storage.getAllTestSessions();
       const questionsData = [];
-      
+
       for (const session of sessions) {
         const questions = await storage.getTestQuestionsBySession(session._id!.toString());
         if (questions.length > 0) {
@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       res.json(questionsData);
     } catch (error) {
       console.error("Error fetching questions:", error);
@@ -435,17 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attemptData = {
         ...req.body,
         traineeId: req.user!.id,
-        startedAt: new Date(),
-        submittedAt: new Date(),
-        status: 'submitted'
       };
-
-      console.log('Creating test attempt:', {
-        traineeId: attemptData.traineeId,
-        sessionId: attemptData.sessionId,
-        status: attemptData.status,
-        submittedAt: attemptData.submittedAt
-      });
 
       // Check if trainee already has an attempt for this session
       const existingAttempt = await storage.getTestAttemptByTraineeAndSession(
@@ -455,26 +445,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (existingAttempt) {
         // Update existing attempt
+        const updateData = {
+          answers: attemptData.answers || existingAttempt.answers,
+          timeSpent: attemptData.timeSpent || existingAttempt.timeSpent,
+          status: attemptData.status || existingAttempt.status,
+        };
+
+        // Only set submittedAt if status is 'submitted'
+        if (attemptData.status === 'submitted') {
+          updateData.submittedAt = new Date();
+        }
+
         const updatedAttempt = await storage.updateTestAttempt(
           existingAttempt._id!.toString(),
-          {
-            answers: attemptData.answers,
-            timeSpent: attemptData.timeSpent,
-            status: 'submitted',
-            submittedAt: new Date(),
-          }
+          updateData
         );
-        console.log('Updated existing attempt:', updatedAttempt._id);
         return res.json(updatedAttempt);
       }
 
       // Create new attempt
-      const attempt = await storage.createTestAttempt(attemptData);
-      console.log('Created new attempt:', attempt._id);
+      const newAttemptData = {
+        ...attemptData,
+        startedAt: new Date(),
+        status: attemptData.status || 'in-progress',
+      };
 
+      // Only set submittedAt if status is 'submitted'
+      if (attemptData.status === 'submitted') {
+        newAttemptData.submittedAt = new Date();
+      }
+
+      const attempt = await storage.createTestAttempt(newAttemptData);
       res.status(201).json(attempt);
     } catch (error) {
       console.error("Test attempt submission error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  // Add PUT endpoint for updating attempts
+  app.put("/api/test-attempts/:id", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      // Ensure trainee can only update their own attempts
+      const attempt = await storage.getTestAttemptById(id);
+      if (!attempt || attempt.traineeId.toString() !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to update this attempt" });
+      }
+
+      const updatedAttempt = await storage.updateTestAttempt(id, updates);
+      if (!updatedAttempt) {
+        return res.status(404).json({ message: "Test attempt not found" });
+      }
+
+      res.json(updatedAttempt);
+    } catch (error) {
+      console.error("Test attempt update error:", error);
       res.status(400).json({ message: "Invalid request data" });
     }
   });
@@ -502,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
     try {
       const db = await connectToDatabase();
-      
+
       // Get all test attempts that have been submitted (must have submittedAt field)
       const attempts = await db.collection('test_attempts')
         .find({ 
@@ -529,7 +557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formattedSubmissions = attempts.map(attempt => {
         const evaluation = evaluationMap.get(attempt._id.toString());
         const session = sessionMap.get(attempt.sessionId.toString());
-        
+
         return {
           id: attempt._id?.toString(),
           _id: attempt._id,
@@ -565,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
     try {
       const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
-      
+
       // Transform attempts to submission format
       const formattedSubmissions = attempts.map(attempt => ({
         id: attempt._id?.toString(),
@@ -771,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-    
+
 
   // Q&A routes (keeping existing ones)
   app.get("/api/qa/questions", authenticateToken, async (req, res) => {
