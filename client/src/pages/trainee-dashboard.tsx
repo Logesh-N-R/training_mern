@@ -83,11 +83,6 @@ export default function TraineeDashboard() {
     queryFn: () => ApiService.get('/api/test-evaluations/my'),
   });
 
-  const { data: myEvaluations = [] } = useQuery({
-    queryKey: ['/api/test-evaluations/my'],
-    queryFn: () => ApiService.get('/api/test-evaluations/my'),
-  });
-
   // Filter active sessions that trainee can take
   const availableSessions = sessions.filter((session: TestSession) => {
     // Only show sessions that don't have attempts yet

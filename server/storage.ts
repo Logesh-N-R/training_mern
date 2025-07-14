@@ -298,37 +298,27 @@ class Storage {
   }
 
   // Initialize database method
-  async initializeDatabase(): Promise<void> {
+  async initializeDatabase() {
     const db = await connectToDatabase();
 
-    // Create indexes for better performance
     try {
-      // User indexes
+      // Create indexes for better performance
       await db.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
-
-      // Test session indexes
-      await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ status: 1 });
+      await db.collection(COLLECTIONS.TRAINEES).createIndex({ traineeId: 1 });
+      await db.collection(COLLECTIONS.SUBMISSIONS).createIndex({ userId: 1 });
+      await db.collection(COLLECTIONS.SUBMISSIONS).createIndex({ submittedAt: -1 });
+      await db.collection(COLLECTIONS.QUESTIONS).createIndex({ title: 1 });
+      await db.collection(COLLECTIONS.QA_POSTS).createIndex({ createdAt: -1 });
+      await db.collection(COLLECTIONS.QA_POSTS).createIndex({ authorId: 1 });
       await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ date: 1 });
-
-      // Test question indexes
-      await db.collection(COLLECTIONS.TEST_QUESTIONS).createIndex({ sessionId: 1 });
-
-      // Test attempt indexes
+      await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ status: 1 });
       await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ traineeId: 1 });
       await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ sessionId: 1 });
-      await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ traineeId: 1, sessionId: 1 }, { unique: true });
+      await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ attemptId: 1 });
 
-      // Test evaluation indexes
-      await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ attemptId: 1 }, { unique: true });
-      await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ traineeId: 1 });
-      await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ sessionId: 1 });
-
-      // Performance report indexes
-      await db.collection(COLLECTIONS.PERFORMANCE_REPORTS).createIndex({ traineeId: 1 });
-
-      console.log("Database indexes initialized successfully");
+      console.log('Database indexes created successfully');
     } catch (error) {
-      console.error("Error creating database indexes:", error);
+      console.error('Error creating database indexes:', error);
     }
   }
 }
