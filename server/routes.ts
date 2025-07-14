@@ -436,7 +436,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         traineeId: req.user!.id,
         startedAt: new Date(),
+        submittedAt: new Date(),
+        status: 'submitted'
       };
+
+      console.log('Creating test attempt:', {
+        traineeId: attemptData.traineeId,
+        sessionId: attemptData.sessionId,
+        status: attemptData.status,
+        submittedAt: attemptData.submittedAt
+      });
 
       // Check if trainee already has an attempt for this session
       const existingAttempt = await storage.getTestAttemptByTraineeAndSession(
@@ -455,15 +464,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             submittedAt: new Date(),
           }
         );
+        console.log('Updated existing attempt:', updatedAttempt._id);
         return res.json(updatedAttempt);
       }
 
       // Create new attempt
-      const attempt = await storage.createTestAttempt({
-        ...attemptData,
-        status: 'submitted',
-        submittedAt: new Date(),
-      });
+      const attempt = await storage.createTestAttempt(attemptData);
+      console.log('Created new attempt:', attempt._id);
 
       res.status(201).json(attempt);
     } catch (error) {
@@ -496,16 +503,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const db = await connectToDatabase();
       
-      // Get all test attempts that have been submitted
+      // Get all test attempts that have been submitted (must have submittedAt field)
       const attempts = await db.collection('test_attempts')
         .find({ 
-          $or: [
-            { status: 'submitted' },
-            { status: 'completed' },
-            { submittedAt: { $exists: true } }
-          ]
+          submittedAt: { $exists: true, $ne: null }
         })
-        .sort({ submittedAt: -1, startedAt: -1 })
+        .sort({ submittedAt: -1 })
         .toArray();
 
       // Get all evaluations to match with attempts
