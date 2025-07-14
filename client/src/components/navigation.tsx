@@ -1,7 +1,7 @@
+
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,20 +32,9 @@ import {
   Menu,
   X,
   Upload,
-  FileText,
-  MessageSquare,
   Settings,
   HelpCircle,
-  Activity,
-  Shield,
-  Database,
-  UserCheck,
-  Clock,
-  Star,
-  BookOpen,
-  CheckCircle,
   User,
-  ChevronDown,
   Moon,
   Sun,
 } from "lucide-react";
@@ -53,7 +42,6 @@ import {
 export function Navigation() {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
@@ -160,6 +148,7 @@ export function Navigation() {
       }),
     );
   };
+
   const TrainQuestLogo = () => (
     <svg
       width="200"
@@ -192,6 +181,7 @@ export function Navigation() {
       </text>
     </svg>
   );
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -261,7 +251,6 @@ export function Navigation() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              {/* Navigation without header text */}
               <TrainQuestLogo />
             </div>
           </div>
@@ -271,15 +260,11 @@ export function Navigation() {
             <div className="ml-10 flex items-baseline space-x-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive =
-                  location === item.href &&
-                  (activeSection === item.section ||
-                    (!activeSection && !item.section));
+                const isActive = activeSection === item.section;
 
                 return (
-                  <Link
-                    key={`${item.href}-${index}`}
-                    href={item.href}
+                  <button
+                    key={`nav-${item.section}-${index}`}
                     className={`text-slate-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
                       isActive ? "text-primary bg-blue-50 shadow-sm" : ""
                     }`}
@@ -287,7 +272,7 @@ export function Navigation() {
                   >
                     <Icon className="w-4 h-4 mr-2" />
                     {item.label}
-                  </Link>
+                  </button>
                 );
               })}
             </div>
@@ -470,16 +455,12 @@ export function Navigation() {
             <div className="space-y-2">
               {getNavItems().map((item, index) => {
                 const Icon = item.icon;
-                const isActive =
-                  location === item.href &&
-                  (activeSection === item.section ||
-                    (!activeSection && !item.section));
+                const isActive = activeSection === item.section;
 
                 return (
-                  <Link
-                    key={`mobile-${item.href}-${index}`}
-                    href={item.href}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                  <button
+                    key={`mobile-nav-${item.section}-${index}`}
+                    className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium ${
                       isActive
                         ? "text-primary bg-blue-50 shadow-sm"
                         : "text-slate-700 hover:text-primary hover:bg-slate-50"
@@ -488,7 +469,7 @@ export function Navigation() {
                   >
                     <Icon className="w-4 h-4 mr-3" />
                     {item.label}
-                  </Link>
+                  </button>
                 );
               })}
 
