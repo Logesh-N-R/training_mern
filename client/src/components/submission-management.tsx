@@ -190,23 +190,10 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
     return user ? user.name : 'Unknown User';
   };
 
-  const completedSubmissions = submissions.filter((submission: Submission) => 
-    submission.submittedAt || 
-    submission.status === 'completed' || 
-    submission.status === 'Completed' || 
-    submission.status === 'submitted' ||
-    (submission.questionAnswers && submission.questionAnswers.length > 0) // Include any submission with answers
-  );
+  // All submissions are already filtered on the server side to only include submitted ones
+  const completedSubmissions = submissions;
 
   const filteredSubmissions = submissions.filter((submission: Submission) => {
-    // Show all submissions that have been submitted (not just saved drafts)
-    const isSubmittedOrEvaluated = submission.submittedAt || 
-                                  submission.evaluation ||
-                                  submission.status === 'submitted' || 
-                                  submission.status === 'completed' || 
-                                  submission.status === 'Completed' ||
-                                  submission.status === 'In Progress'; // Include in progress submissions that might have been submitted
-
     const matchesSearch = searchTerm === '' || 
       submission.sessionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (submission.userId && getUserName(submission.userId).toLowerCase().includes(searchTerm.toLowerCase()));
@@ -226,7 +213,7 @@ export function SubmissionManagement({ userRole }: SubmissionManagementProps) {
              dateFilter === 'month' ? diffDays <= 30 : true;
     })();
 
-    return isSubmittedOrEvaluated && matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const uniqueDates = [...new Set(submissions.map((s: Submission) => s.date))].sort().reverse();

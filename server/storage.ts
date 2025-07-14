@@ -225,6 +225,16 @@ class Storage {
     return result as TestEvaluation | null;
   }
 
+  async updateTestAttempt(id: string, updates: any) {
+    const db = await connectToDatabase();
+    const result = await db.collection('test_attempts').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { ...updates, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    return result;
+  }
+
   // Get test attempt by ID
   async getTestAttemptById(id: string): Promise<TestAttempt | null> {
     const db = await connectToDatabase();

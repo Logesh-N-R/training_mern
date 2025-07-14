@@ -495,24 +495,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
     try {
       const db = await connectToDatabase();
-      const submissions = await db.collection('test_attempts').find({}).sort({ submittedAt: -1 }).toArray();
       
-      // Transform attempts to submission format for compatibility
-      const formattedSubmissions = submissions.map(attempt => ({
-        id: attempt._id?.toString(),
-        _id: attempt._id,
-        userId: attempt.traineeId,
-        sessionId: attempt.sessionId,
-        sessionTitle: attempt.sessionTitle || 'Test Session',
-        date: attempt.startedAt ? new Date(attempt.startedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        questionAnswers: attempt.answers || [],
-        overallUnderstanding: 'Good', // Default value
-        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
-        remarks: '',
-        submittedAt: attempt.submittedAt || attempt.startedAt,
-        evaluation: null // Will be populated if evaluation exists
-      }));
+      // Get all test attempts that have been submitted
+      const attempts = await db.collection('test_attempts')
+        .find({ 
+          $or: [
+            { status: 'submitted' },
+            { status: 'completed' },
+            { submittedAt: { $exists: true } }
+          ]
+        })
+        .sort({ submittedAt: -1, startedAt: -1 })
+        .toArray();
 
+      // Get all evaluations to match with attempts
+      const evaluations = await db.collection('test_evaluations').find({}).toArray();
+      const evaluationMap = new Map();
+      evaluations.forEach(eval => {
+        evaluationMap.set(eval.attemptId.toString(), eval);
+      });
+
+      // Get all test sessions to get session titles
+      const sessions = await db.collection('test_sessions').find({}).toArray();
+      const sessionMap = new Map();
+      sessions.forEach(session => {
+        sessionMap.set(session._id.toString(), session);
+      });
+
+      // Transform attempts to submission format
+      const formattedSubmissions = attempts.map(attempt => {
+        const evaluation = evaluationMap.get(attempt._id.toString());
+        const session = sessionMap.get(attempt.sessionId.toString());
+        
+        return {
+          id: attempt._id?.toString(),
+          _id: attempt._id,
+          userId: attempt.traineeId?.toString(),
+          sessionId: attempt.sessionId?.toString(),
+          sessionTitle: session?.title || attempt.sessionTitle || 'Test Session',
+          date: attempt.startedAt ? new Date(attempt.startedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          questionAnswers: attempt.answers || [],
+          overallUnderstanding: evaluation?.overallUnderstanding || 'Good',
+          status: attempt.status === 'submitted' ? 'Completed' : (attempt.status || 'Completed'),
+          remarks: evaluation?.remarks || '',
+          submittedAt: attempt.submittedAt || attempt.startedAt,
+          evaluation: evaluation ? {
+            totalScore: evaluation.totalScore,
+            maxScore: evaluation.maxScore,
+            percentage: evaluation.percentage,
+            grade: evaluation.grade,
+            evaluatedBy: evaluation.evaluatedBy,
+            overallFeedback: evaluation.overallFeedback,
+            createdAt: evaluation.createdAt
+          } : null
+        };
+      });
+
+      console.log(`Found ${formattedSubmissions.length} submissions`);
       res.json(formattedSubmissions);
     } catch (error) {
       console.error("Error fetching submissions:", error);
