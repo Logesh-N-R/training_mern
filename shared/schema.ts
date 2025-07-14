@@ -190,6 +190,19 @@ export const testEvaluationSchema = z.object({
   improvements: z.array(z.string()).default([]),
 });
 
+export const questionFormSchema = z.object({
+  date: z.string().min(1),
+  sessionTitle: z.string().min(1),
+  questions: z.array(z.object({
+    topic: z.string().min(1),
+    question: z.string().min(1),
+    type: z.enum(['text', 'multiple-choice', 'choose-best', 'true-false', 'fill-blank']),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional(),
+    explanation: z.string().optional(),
+  })).min(1),
+});
+
 // Types
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;
@@ -197,6 +210,7 @@ export type TestSessionData = z.infer<typeof testSessionSchema>;
 export type TestQuestionData = z.infer<typeof testQuestionSchema>;
 export type TestAttemptData = z.infer<typeof testAttemptSchema>;
 export type TestEvaluationData = z.infer<typeof testEvaluationSchema>;
+export type QuestionFormData = z.infer<typeof questionFormSchema>;
 
 // Collection names
 export const COLLECTIONS = {
