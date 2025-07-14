@@ -383,7 +383,7 @@ export default function SuperAdminPanel() {
                     <p className="text-sm text-slate-600">Access admin-level features and controls</p>
                   </div>
                   <Button
-                    onClick={() => window.location.href = '/admin/dashboard'}
+                    onClick={() => window.dispatchEvent(new CustomEvent('navigation-section-change', { detail: { section: 'users' } }))}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Shield className="w-4 h-4 mr-2" />
