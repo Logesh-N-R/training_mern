@@ -92,18 +92,20 @@ export function UserTestsDashboard({ userRole }: UserTestsDashboardProps = {}) {
         stats.submissions.push(submission);
         stats.totalTests++;
         
-        if (submission.status === 'Completed' || submission.status === 'completed' || submission.status === 'submitted') {
+        if (submission.status === 'submitted' || submission.status === 'evaluated') {
           stats.completedTests++;
         }
         
-        if (submission.evaluation) {
+        if (submission.status === 'evaluated' || submission.evaluation) {
           stats.evaluatedTests++;
         }
         
         // Update last submission date
-        const submissionDate = new Date(submission.submittedAt);
-        if (stats.lastSubmission === 'Never' || submissionDate > new Date(stats.lastSubmission)) {
-          stats.lastSubmission = submission.submittedAt;
+        if (submission.submittedAt) {
+          const submissionDate = new Date(submission.submittedAt);
+          if (stats.lastSubmission === 'Never' || submissionDate > new Date(stats.lastSubmission)) {
+            stats.lastSubmission = submission.submittedAt;
+          }
         }
       }
     });

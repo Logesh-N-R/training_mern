@@ -488,6 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
       const sessions = await storage.getAllTestSessions();
       const evaluations = await storage.getTestEvaluationsByTrainee(req.user!.id);
+      const questions = await storage.getAllTestQuestions();
       
       // Transform attempts to look like submissions for compatibility
       const submissions = attempts
@@ -495,34 +496,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(attempt => {
           const session = sessions.find(s => s._id?.toString() === attempt.sessionId.toString());
           const evaluation = evaluations.find(e => e.attemptId?.toString() === attempt._id?.toString());
+          const sessionQuestions = questions.filter(q => q.sessionId.toString() === attempt.sessionId.toString());
           
           return {
+            _id: attempt._id?.toString(),
             id: attempt._id?.toString(),
             userId: attempt.traineeId.toString(),
+            sessionId: attempt.sessionId.toString(),
             sessionTitle: session?.title || 'Test Session',
             date: session?.date || new Date().toISOString().split('T')[0],
             submittedAt: attempt.submittedAt || attempt.startedAt,
-            status: attempt.status === 'submitted' ? 'Completed' : 
-                   attempt.status === 'evaluated' ? 'Completed' : 
-                   attempt.status,
+            status: evaluation ? 'evaluated' : 'submitted',
             overallUnderstanding: 'Good', // Default value
             remarks: '',
-            questionAnswers: attempt.answers?.map(answer => ({
-              question: 'Question text',
-              answer: answer.answer,
-              topic: 'General',
-              type: 'text',
-              options: [],
-              correctAnswer: '',
-              score: answer.score || 0,
-              feedback: answer.feedback || ''
-            })) || [],
+            questionAnswers: attempt.answers?.map((answer, index) => {
+              const question = sessionQuestions[index];
+              return {
+                question: question?.question || 'Question text',
+                answer: answer.answer,
+                topic: question?.category || 'General',
+                type: question?.type || 'text',
+                options: question?.options || [],
+                correctAnswer: question?.correctAnswer || '',
+                score: answer.score || 0,
+                feedback: answer.feedback || ''
+              };
+            }) || [],
             evaluation: evaluation ? {
               totalScore: evaluation.totalScore,
               maxScore: evaluation.maxScore,
               percentage: evaluation.percentage,
               grade: evaluation.grade,
               evaluatedBy: 'Admin',
+              evaluatedAt: evaluation.createdAt,
               overallFeedback: evaluation.overallFeedback
             } : null,
             timeSpent: attempt.timeSpent || 0
@@ -542,6 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessions = await storage.getAllTestSessions();
       const users = await storage.getAllUsers();
       const evaluations = await storage.getAllTestEvaluations();
+      const questions = await storage.getAllTestQuestions();
       
       // Transform attempts to look like submissions for compatibility
       const submissions = attempts
@@ -550,34 +557,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const session = sessions.find(s => s._id?.toString() === attempt.sessionId.toString());
           const user = users.find(u => u._id?.toString() === attempt.traineeId.toString());
           const evaluation = evaluations.find(e => e.attemptId?.toString() === attempt._id?.toString());
+          const sessionQuestions = questions.filter(q => q.sessionId.toString() === attempt.sessionId.toString());
           
           return {
+            _id: attempt._id?.toString(),
             id: attempt._id?.toString(),
             userId: attempt.traineeId.toString(),
+            sessionId: attempt.sessionId.toString(),
             sessionTitle: session?.title || 'Test Session',
             date: session?.date || new Date().toISOString().split('T')[0],
             submittedAt: attempt.submittedAt || attempt.startedAt,
-            status: attempt.status === 'submitted' ? 'Completed' : 
-                   attempt.status === 'evaluated' ? 'Completed' : 
-                   attempt.status,
+            status: evaluation ? 'evaluated' : 'submitted',
             overallUnderstanding: 'Good', // Default value
             remarks: '',
-            questionAnswers: attempt.answers?.map(answer => ({
-              question: 'Question text', // You might want to fetch actual question text
-              answer: answer.answer,
-              topic: 'General',
-              type: 'text',
-              options: [],
-              correctAnswer: '',
-              score: answer.score || 0,
-              feedback: answer.feedback || ''
-            })) || [],
+            questionAnswers: attempt.answers?.map((answer, index) => {
+              const question = sessionQuestions[index];
+              return {
+                question: question?.question || 'Question text',
+                answer: answer.answer,
+                topic: question?.category || 'General',
+                type: question?.type || 'text',
+                options: question?.options || [],
+                correctAnswer: question?.correctAnswer || '',
+                score: answer.score || 0,
+                feedback: answer.feedback || ''
+              };
+            }) || [],
             evaluation: evaluation ? {
               totalScore: evaluation.totalScore,
               maxScore: evaluation.maxScore,
               percentage: evaluation.percentage,
               grade: evaluation.grade,
               evaluatedBy: 'Admin',
+              evaluatedAt: evaluation.createdAt,
               overallFeedback: evaluation.overallFeedback
             } : null,
             timeSpent: attempt.timeSpent || 0,
@@ -589,6 +601,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching submissions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Add submission evaluation endpoint
+  app.put("/api/submissions/:id", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { questionAnswers, evaluation } = req.body;
+
+      // Find the test attempt
+      const attempt = await storage.getTestAttemptById(id);
+      if (!attempt) {
+        return res.status(404).json({ message: "Test attempt not found" });
+      }
+
+      // Update answers with scores and feedback
+      const updatedAnswers = attempt.answers?.map((answer, index) => ({
+        ...answer,
+        score: questionAnswers[index]?.score || 0,
+        feedback: questionAnswers[index]?.feedback || ''
+      })) || [];
+
+      // Update the attempt
+      await storage.updateTestAttempt(id, {
+        answers: updatedAnswers,
+        status: 'evaluated'
+      });
+
+      // Create or update evaluation
+      const evaluationData = {
+        attemptId: new ObjectId(id),
+        traineeId: new ObjectId(attempt.traineeId.toString()),
+        sessionId: new ObjectId(attempt.sessionId.toString()),
+        totalScore: evaluation.totalScore,
+        maxScore: evaluation.maxScore,
+        percentage: evaluation.percentage,
+        grade: evaluation.grade,
+        overallFeedback: evaluation.overallFeedback,
+        questionFeedback: evaluation.questionFeedback,
+        evaluatorId: new ObjectId(req.user!.id),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const existingEvaluation = await storage.getTestEvaluationByAttemptId(id);
+      if (existingEvaluation) {
+        await storage.updateTestEvaluation(existingEvaluation._id!.toString(), evaluationData);
+      } else {
+        await storage.createTestEvaluation(evaluationData);
+      }
+
+      res.json({ message: "Submission evaluated successfully" });
+    } catch (error) {
+      console.error("Error evaluating submission:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

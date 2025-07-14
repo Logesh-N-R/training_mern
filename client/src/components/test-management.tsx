@@ -76,19 +76,14 @@ export function TestManagement({ userRole }: TestManagementProps) {
 
         let status = 'not_started';
         let canEdit = false;
-        let submissionId = null;
-        let score = null;
-        let evaluation = null;
 
         if (attempt) {
-          submissionId = attempt._id;
-          if (attempt.status === 'submitted' || attempt.status === 'evaluated') {
-            status = attempt.status === 'evaluated' ? 'evaluated' : 'submitted';
-            // Check if there's an evaluation for this attempt
-            if (attempt.evaluation) {
-              evaluation = attempt.evaluation;
-              score = `${evaluation.percentage}% (${evaluation.grade})`;
-            }
+          if (attempt.status === 'evaluated') {
+            status = 'evaluated';
+            canEdit = false;
+          } else if (attempt.status === 'submitted') {
+            status = 'submitted';
+            canEdit = false;
           } else if (attempt.status === 'in-progress') {
             status = 'saved';
             canEdit = true;

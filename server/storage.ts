@@ -157,129 +157,124 @@ class Storage {
   }
 
   // Test Attempt methods
-  async createTestAttempt(attemptData: InsertTestAttempt): Promise<TestAttempt> {
-    const db = await connectToDatabase();
+  async createTestAttempt(data: any) {
     const attempt = {
-      ...attemptData,
-      sessionId: new ObjectId(attemptData.sessionId),
-      traineeId: new ObjectId(attemptData.traineeId),
-      answers: attemptData.answers.map(answer => ({
-        ...answer,
-        questionId: new ObjectId(answer.questionId),
-      })),
+      ...data,
+      traineeId: new ObjectId(data.traineeId),
+      sessionId: new ObjectId(data.sessionId),
+      startedAt: data.startedAt || new Date(),
+      submittedAt: data.submittedAt || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
-    const result = await db.collection(COLLECTIONS.TEST_ATTEMPTS).insertOne(attempt);
+    const db = await connectToDatabase();
+    const result = await db.collection('test_attempts').insertOne(attempt);
     return { ...attempt, _id: result.insertedId };
   }
 
-  async getTestAttempt(id: string): Promise<TestAttempt | null> {
+  async getTestAttemptsByTrainee(traineeId: string) {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOne({ _id: new ObjectId(id) });
-  }
-
-  async getTestAttemptsByTrainee(traineeId: string): Promise<TestAttempt[]> {
-    const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+    return await db.collection('test_attempts')
       .find({ traineeId: new ObjectId(traineeId) })
-      .sort({ startedAt: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
   }
 
-  async getTestAttemptsBySession(sessionId: string): Promise<TestAttempt[]> {
+  async getTestAttemptsBySession(sessionId: string) {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+    return await db.collection('test_attempts')
       .find({ sessionId: new ObjectId(sessionId) })
-      .sort({ submittedAt: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
   }
 
-  async getAllTestAttempts(): Promise<TestAttempt[]> {
+  async getAllTestAttempts() {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_ATTEMPTS)
+    return await db.collection('test_attempts')
       .find({})
-      .sort({ submittedAt: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
   }
 
-  async getTestAttemptByTraineeAndSession(traineeId: string, sessionId: string): Promise<TestAttempt | null> {
+  async getTestAttemptByTraineeAndSession(traineeId: string, sessionId: string) {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOne({
-      traineeId: new ObjectId(traineeId),
-      sessionId: new ObjectId(sessionId),
-    });
+    return await db.collection('test_attempts')
+      .findOne({ 
+        traineeId: new ObjectId(traineeId), 
+        sessionId: new ObjectId(sessionId) 
+      });
   }
 
-  async updateTestAttempt(id: string, updates: Partial<TestAttempt>): Promise<TestAttempt | null> {
+  async getTestAttemptById(id: string) {
     const db = await connectToDatabase();
-    const processedUpdates = { ...updates };
-    if (updates.answers) {
-      processedUpdates.answers = updates.answers.map(answer => ({
-        ...answer,
-        questionId: new ObjectId(answer.questionId),
-      }));
-    }
+    return await db.collection('test_attempts')
+      .findOne({ _id: new ObjectId(id) });
+  }
 
-    const result = await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOneAndUpdate(
+  async updateTestAttempt(id: string, updates: any) {
+    const db = await connectToDatabase();
+    const result = await db.collection('test_attempts').findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: processedUpdates },
-      { returnDocument: "after" }
+      { $set: { ...updates, updatedAt: new Date() } },
+      { returnDocument: 'after' }
     );
     return result;
   }
 
-  // Test Evaluation methods
-  async createTestEvaluation(evaluationData: InsertTestEvaluation): Promise<TestEvaluation> {
+  async getAllTestQuestions() {
     const db = await connectToDatabase();
+    return await db.collection('test_questions')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  // Test Evaluation methods
+  async createTestEvaluation(data: any) {
     const evaluation = {
-      ...evaluationData,
-      attemptId: new ObjectId(evaluationData.attemptId),
-      sessionId: new ObjectId(evaluationData.sessionId),
-      traineeId: new ObjectId(evaluationData.traineeId),
-      evaluatorId: new ObjectId(evaluationData.evaluatorId),
-      questionEvaluations: evaluationData.questionEvaluations.map(qe => ({
-        ...qe,
-        questionId: new ObjectId(qe.questionId),
-      })),
-      evaluatedAt: new Date(),
+      ...data,
+      attemptId: new ObjectId(data.attemptId),
+      traineeId: new ObjectId(data.traineeId),
+      sessionId: new ObjectId(data.sessionId),
+      evaluatorId: new ObjectId(data.evaluatorId),
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
-    const result = await db.collection(COLLECTIONS.TEST_EVALUATIONS).insertOne(evaluation);
+    const db = await connectToDatabase();
+    const result = await db.collection('test_evaluations').insertOne(evaluation);
     return { ...evaluation, _id: result.insertedId };
   }
 
-  async getTestEvaluation(id: string): Promise<TestEvaluation | null> {
+  async getTestEvaluationsByTrainee(traineeId: string) {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOne({ _id: new ObjectId(id) });
-  }
-
-  async getTestEvaluationByAttempt(attemptId: string): Promise<TestEvaluation | null> {
-    const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOne({ attemptId: new ObjectId(attemptId) });
-  }
-
-  async getTestEvaluationsByTrainee(traineeId: string): Promise<TestEvaluation[]> {
-    const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_EVALUATIONS)
+    return await db.collection('test_evaluations')
       .find({ traineeId: new ObjectId(traineeId) })
-      .sort({ evaluatedAt: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
   }
 
-  async getAllTestEvaluations(): Promise<TestEvaluation[]> {
+  async getAllTestEvaluations() {
     const db = await connectToDatabase();
-    return await db.collection(COLLECTIONS.TEST_EVALUATIONS)
+    return await db.collection('test_evaluations')
       .find({})
-      .sort({ evaluatedAt: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
   }
 
-  async updateTestEvaluation(id: string, updates: Partial<TestEvaluation>): Promise<TestEvaluation | null> {
+  async getTestEvaluationByAttemptId(attemptId: string) {
     const db = await connectToDatabase();
-    const result = await db.collection(COLLECTIONS.TEST_EVALUATIONS).findOneAndUpdate(
+    return await db.collection('test_evaluations')
+      .findOne({ attemptId: new ObjectId(attemptId) });
+  }
+
+  async updateTestEvaluation(id: string, updates: any) {
+    const db = await connectToDatabase();
+    const result = await db.collection('test_evaluations').findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: updates },
-      { returnDocument: "after" }
+      { $set: { ...updates, updatedAt: new Date() } },
+      { returnDocument: 'after' }
     );
     return result;
   }
@@ -308,32 +303,32 @@ class Storage {
   // Initialize database method
   async initializeDatabase(): Promise<void> {
     const db = await connectToDatabase();
-    
+
     // Create indexes for better performance
     try {
       // User indexes
       await db.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
-      
+
       // Test session indexes
       await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ status: 1 });
       await db.collection(COLLECTIONS.TEST_SESSIONS).createIndex({ date: 1 });
-      
+
       // Test question indexes
       await db.collection(COLLECTIONS.TEST_QUESTIONS).createIndex({ sessionId: 1 });
-      
+
       // Test attempt indexes
       await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ traineeId: 1 });
       await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ sessionId: 1 });
       await db.collection(COLLECTIONS.TEST_ATTEMPTS).createIndex({ traineeId: 1, sessionId: 1 }, { unique: true });
-      
+
       // Test evaluation indexes
       await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ attemptId: 1 }, { unique: true });
       await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ traineeId: 1 });
       await db.collection(COLLECTIONS.TEST_EVALUATIONS).createIndex({ sessionId: 1 });
-      
+
       // Performance report indexes
       await db.collection(COLLECTIONS.PERFORMANCE_REPORTS).createIndex({ traineeId: 1 });
-      
+
       console.log("Database indexes initialized successfully");
     } catch (error) {
       console.error("Error creating database indexes:", error);
