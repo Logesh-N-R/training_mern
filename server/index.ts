@@ -68,7 +68,7 @@ async function startServer() {
     await connectToDatabase();
 
     const { storage } = await import('./storage');
-    await storage.initializeSuperAdmin();
+    await storage.initializeDatabase();
 
     const server = await registerRoutes(app);
 
