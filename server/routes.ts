@@ -486,16 +486,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
     try {
       const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
+      const sessions = await storage.getAllTestSessions();
+      const evaluations = await storage.getTestEvaluationsByTrainee(req.user!.id);
+      
       // Transform attempts to look like submissions for compatibility
-      const submissions = attempts.map(attempt => ({
-        ...attempt,
-        userId: attempt.traineeId,
-        sessionTitle: 'Test Session', // You might want to fetch actual session title
-        submittedAt: attempt.submittedAt || attempt.startedAt,
-        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
-      }));
+      const submissions = attempts
+        .filter(attempt => attempt.status === 'submitted' || attempt.submittedAt)
+        .map(attempt => {
+          const session = sessions.find(s => s._id?.toString() === attempt.sessionId.toString());
+          const evaluation = evaluations.find(e => e.attemptId?.toString() === attempt._id?.toString());
+          
+          return {
+            id: attempt._id?.toString(),
+            userId: attempt.traineeId.toString(),
+            sessionTitle: session?.title || 'Test Session',
+            date: session?.date || new Date().toISOString().split('T')[0],
+            submittedAt: attempt.submittedAt || attempt.startedAt,
+            status: attempt.status === 'submitted' ? 'Completed' : 
+                   attempt.status === 'evaluated' ? 'Completed' : 
+                   attempt.status,
+            overallUnderstanding: 'Good', // Default value
+            remarks: '',
+            questionAnswers: attempt.answers?.map(answer => ({
+              question: 'Question text',
+              answer: answer.answer,
+              topic: 'General',
+              type: 'text',
+              options: [],
+              correctAnswer: '',
+              score: answer.score || 0,
+              feedback: answer.feedback || ''
+            })) || [],
+            evaluation: evaluation ? {
+              totalScore: evaluation.totalScore,
+              maxScore: evaluation.maxScore,
+              percentage: evaluation.percentage,
+              grade: evaluation.grade,
+              evaluatedBy: 'Admin',
+              overallFeedback: evaluation.overallFeedback
+            } : null,
+            timeSpent: attempt.timeSpent || 0
+          };
+        });
+      
       res.json(submissions);
     } catch (error) {
+      console.error("Error fetching user submissions:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -503,16 +539,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/submissions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
     try {
       const attempts = await storage.getAllTestAttempts();
+      const sessions = await storage.getAllTestSessions();
+      const users = await storage.getAllUsers();
+      const evaluations = await storage.getAllTestEvaluations();
+      
       // Transform attempts to look like submissions for compatibility
-      const submissions = attempts.map(attempt => ({
-        ...attempt,
-        userId: attempt.traineeId,
-        sessionTitle: 'Test Session', // You might want to fetch actual session title
-        submittedAt: attempt.submittedAt || attempt.startedAt,
-        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
-      }));
+      const submissions = attempts
+        .filter(attempt => attempt.status === 'submitted' || attempt.submittedAt)
+        .map(attempt => {
+          const session = sessions.find(s => s._id?.toString() === attempt.sessionId.toString());
+          const user = users.find(u => u._id?.toString() === attempt.traineeId.toString());
+          const evaluation = evaluations.find(e => e.attemptId?.toString() === attempt._id?.toString());
+          
+          return {
+            id: attempt._id?.toString(),
+            userId: attempt.traineeId.toString(),
+            sessionTitle: session?.title || 'Test Session',
+            date: session?.date || new Date().toISOString().split('T')[0],
+            submittedAt: attempt.submittedAt || attempt.startedAt,
+            status: attempt.status === 'submitted' ? 'Completed' : 
+                   attempt.status === 'evaluated' ? 'Completed' : 
+                   attempt.status,
+            overallUnderstanding: 'Good', // Default value
+            remarks: '',
+            questionAnswers: attempt.answers?.map(answer => ({
+              question: 'Question text', // You might want to fetch actual question text
+              answer: answer.answer,
+              topic: 'General',
+              type: 'text',
+              options: [],
+              correctAnswer: '',
+              score: answer.score || 0,
+              feedback: answer.feedback || ''
+            })) || [],
+            evaluation: evaluation ? {
+              totalScore: evaluation.totalScore,
+              maxScore: evaluation.maxScore,
+              percentage: evaluation.percentage,
+              grade: evaluation.grade,
+              evaluatedBy: 'Admin',
+              overallFeedback: evaluation.overallFeedback
+            } : null,
+            timeSpent: attempt.timeSpent || 0,
+            userName: user?.name || 'Unknown User',
+            userEmail: user?.email || 'unknown@email.com'
+          };
+        });
+      
       res.json(submissions);
     } catch (error) {
+      console.error("Error fetching submissions:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
