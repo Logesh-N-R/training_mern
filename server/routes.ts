@@ -273,6 +273,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all questions endpoint
+  app.get("/api/questions", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const sessions = await storage.getAllTestSessions();
+      const questionsData = [];
+      
+      for (const session of sessions) {
+        const questions = await storage.getTestQuestionsBySession(session._id!.toString());
+        if (questions.length > 0) {
+          questionsData.push({
+            _id: session._id,
+            date: session.date,
+            sessionTitle: session.title,
+            questions: questions,
+            createdAt: session.createdAt || new Date().toISOString(),
+          });
+        }
+      }
+      
+      res.json(questionsData);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Question upload endpoint (for question-uploader component)
   app.post("/api/questions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
     try {
@@ -451,6 +477,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const evaluations = await storage.getTestEvaluationsByTrainee(req.user!.id);
       res.json(evaluations);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Submissions endpoint (legacy compatibility)
+  app.get("/api/submissions/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
+      // Transform attempts to look like submissions for compatibility
+      const submissions = attempts.map(attempt => ({
+        ...attempt,
+        userId: attempt.traineeId,
+        sessionTitle: 'Test Session', // You might want to fetch actual session title
+        submittedAt: attempt.submittedAt || attempt.startedAt,
+        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
+      }));
+      res.json(submissions);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/submissions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const attempts = await storage.getAllTestAttempts();
+      // Transform attempts to look like submissions for compatibility
+      const submissions = attempts.map(attempt => ({
+        ...attempt,
+        userId: attempt.traineeId,
+        sessionTitle: 'Test Session', // You might want to fetch actual session title
+        submittedAt: attempt.submittedAt || attempt.startedAt,
+        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
+      }));
+      res.json(submissions);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
