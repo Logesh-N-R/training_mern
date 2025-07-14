@@ -273,6 +273,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Question upload endpoint (for question-uploader component)
+  app.post("/api/questions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { date, sessionTitle, questions } = req.body;
+
+      // Create a test session first
+      const sessionData = {
+        title: sessionTitle,
+        description: `Questions for ${date}`,
+        date: date,
+        startTime: "09:00",
+        endTime: "10:00",
+        duration: 60,
+        status: 'active' as const,
+        createdBy: new ObjectId(req.user!.id),
+      };
+
+      const session = await storage.createTestSession(sessionData);
+
+      // Create questions for the session
+      const createdQuestions = [];
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        const questionData = {
+          sessionId: session._id!.toString(),
+          questionNumber: i + 1,
+          category: question.topic || 'General',
+          question: question.question,
+          type: question.type === 'multiple-choice' || question.type === 'choose-best' ? 'multiple-choice' : 
+                question.type === 'true-false' ? 'true-false' : 'text-input',
+          options: question.options?.filter(opt => opt.trim()) || [],
+          correctAnswer: question.correctAnswer,
+          points: 10,
+          explanation: question.explanation || '',
+          difficulty: 'medium' as const,
+          tags: [question.topic || 'General'],
+        };
+
+        const createdQuestion = await storage.createTestQuestion(questionData);
+        createdQuestions.push(createdQuestion);
+      }
+
+      res.status(201).json({
+        message: 'Questions uploaded successfully',
+        session: session,
+        questions: createdQuestions,
+      });
+    } catch (error) {
+      console.error("Question upload error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
   // Test Question routes
   app.get("/api/test-questions/:sessionId", authenticateToken, async (req: AuthRequest, res) => {
     try {
