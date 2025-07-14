@@ -103,55 +103,7 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
     }
   };
 
-  const handleSaveAsDraft = async () => {
-    if (isSubmitting || viewOnly || isCompleted) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const questionAnswers = questionSet.questions.map((question, index) => ({
-        question: question.question,
-        type: question.type,
-        topic: question.topic,
-        answer: answers[index] || '',
-        options: question.options || [],
-        correctAnswer: question.correctAnswer || ''
-      }));
-
-      const submission = {
-        id: submissionId,
-        questionSetId: questionSet._id,
-        date: questionSet.date,
-        sessionTitle: questionSet.sessionTitle,
-        questionAnswers,
-        overallUnderstanding,
-        status: 'saved',
-        remarks,
-        userId: user?.id || user?._id
-      };
-
-      const result = await onSubmit(submission);
-
-      // Update submission ID if this is a new submission
-      if (result && (result.id || result._id) && !submissionId) {
-        setSubmissionId(result.id || result._id);
-      }
-
-      toast({
-        title: "Success",
-        description: "Your test has been saved as draft!",
-      });
-    } catch (error) {
-      console.error('Save draft error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save test. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  
 
   const handleSubmit = async (isAutoSubmit = false) => {
     if (isSubmitting || viewOnly) return;
@@ -422,31 +374,11 @@ export function TestForm({ questionSet, onSubmit, existingSubmission, viewOnly =
               </Alert>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                onClick={handleSaveAsDraft} 
-                disabled={isSubmitting}
-                variant="outline"
-                className="flex-1"
-                size="lg"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600 mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Save Draft
-                  </>
-                )}
-              </Button>
-
+            <div className="flex justify-center">
               <Button 
                 onClick={() => handleSubmit()} 
                 disabled={isSubmitting || !overallUnderstanding}
-                className="flex-1"
+                className="w-full max-w-md"
                 size="lg"
               >
                 {isSubmitting ? (
