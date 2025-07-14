@@ -297,14 +297,14 @@ class Storage {
       .toArray();
   }
 
-  // Initialize database method
+  // Initialize database with required indexes
   async initializeDatabase() {
     const db = await connectToDatabase();
 
     try {
       // Create indexes for better performance - only for collections that actually exist
       const collections = ['users', 'test_sessions', 'test_attempts', 'test_evaluations', 'test_questions', 'performance_reports'];
-      
+
       for (const collectionName of collections) {
         try {
           switch (collectionName) {
@@ -337,6 +337,62 @@ class Storage {
       console.log('Database initialization completed');
     } catch (error) {
       console.error('Error during database initialization:', error);
+    }
+  }
+
+  // Additional methods for submission compatibility
+  async getAllSubmissions() {
+    try {
+      const db = await connectToDatabase();
+      const submissions = await db.collection(COLLECTIONS.TEST_ATTEMPTS).find({}).sort({ submittedAt: -1 }).toArray();
+
+      return submissions.map(submission => ({
+        ...submission,
+        id: submission._id?.toString()
+      }));
+    } catch (error) {
+      console.error('Error getting all submissions:', error);
+      return [];
+    }
+  }
+
+  async getSubmissionsByUser(userId: string) {
+    try {
+      const db = await connectToDatabase();
+      const submissions = await db.collection(COLLECTIONS.TEST_ATTEMPTS).find({
+        traineeId: userId
+      }).sort({ submittedAt: -1 }).toArray();
+
+      return submissions.map(submission => ({
+        ...submission,
+        id: submission._id?.toString()
+      }));
+    } catch (error) {
+      console.error('Error getting user submissions:', error);
+      return [];
+    }
+  }
+
+  async updateSubmission(id: string, updates: any) {
+    try {
+      const db = await connectToDatabase();
+      const result = await db.collection(COLLECTIONS.TEST_ATTEMPTS).findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { ...updates, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        return null;
+      }
+
+      return {
+        ...result,
+        id: result._id?.toString()
+      };
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      return null;
     }
   }
 }

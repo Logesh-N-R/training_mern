@@ -482,14 +482,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  
-
   app.get("/api/test-evaluations", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
     try {
       const evaluations = await storage.getAllTestEvaluations();
       res.json(evaluations);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Submission Management routes
+  app.get("/api/submissions", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const db = await connectToDatabase();
+      const submissions = await db.collection('test_attempts').find({}).sort({ submittedAt: -1 }).toArray();
+      
+      // Transform attempts to submission format for compatibility
+      const formattedSubmissions = submissions.map(attempt => ({
+        id: attempt._id?.toString(),
+        _id: attempt._id,
+        userId: attempt.traineeId,
+        sessionId: attempt.sessionId,
+        sessionTitle: attempt.sessionTitle || 'Test Session',
+        date: attempt.startedAt ? new Date(attempt.startedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        questionAnswers: attempt.answers || [],
+        overallUnderstanding: 'Good', // Default value
+        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
+        remarks: '',
+        submittedAt: attempt.submittedAt || attempt.startedAt,
+        evaluation: null // Will be populated if evaluation exists
+      }));
+
+      res.json(formattedSubmissions);
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/submissions/my", authenticateToken, requireRole(["trainee"]), async (req: AuthRequest, res) => {
+    try {
+      const attempts = await storage.getTestAttemptsByTrainee(req.user!.id);
+      
+      // Transform attempts to submission format
+      const formattedSubmissions = attempts.map(attempt => ({
+        id: attempt._id?.toString(),
+        _id: attempt._id,
+        userId: attempt.traineeId,
+        sessionId: attempt.sessionId,
+        sessionTitle: attempt.sessionTitle || 'Test Session',
+        date: attempt.startedAt ? new Date(attempt.startedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        questionAnswers: attempt.answers || [],
+        overallUnderstanding: 'Good',
+        status: attempt.status === 'submitted' ? 'Completed' : attempt.status,
+        remarks: '',
+        submittedAt: attempt.submittedAt || attempt.startedAt,
+        evaluation: null
+      }));
+
+      res.json(formattedSubmissions);
+    } catch (error) {
+      console.error("Error fetching user submissions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/submissions/:id", authenticateToken, requireRole(["admin", "superadmin"]), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const db = await connectToDatabase();
+      const result = await db.collection('test_attempts').findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { ...updates, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        return res.status(404).json({ message: "Submission not found" });
+      }
+
+      res.json({
+        ...result,
+        id: result._id?.toString()
+      });
+    } catch (error) {
+      console.error("Error updating submission:", error);
+      res.status(400).json({ message: "Invalid request data" });
     }
   });
 
