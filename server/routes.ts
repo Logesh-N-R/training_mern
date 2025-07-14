@@ -511,8 +511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all evaluations to match with attempts
       const evaluations = await db.collection('test_evaluations').find({}).toArray();
       const evaluationMap = new Map();
-      evaluations.forEach(eval => {
-        evaluationMap.set(eval.attemptId.toString(), eval);
+      evaluations.forEach(evaluation => {
+        evaluationMap.set(evaluation.attemptId.toString(), evaluation);
       });
 
       // Get all test sessions to get session titles
