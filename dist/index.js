@@ -28,304 +28,319 @@ var init_db = __esm({
   }
 });
 
-// shared/schema.ts
-import { z } from "zod";
-var loginSchema, registerSchema, questionFormSchema, testFormSchema, evaluationSchema, updateSubmissionSchema, createUserSchema, COLLECTIONS;
-var init_schema = __esm({
-  "shared/schema.ts"() {
-    "use strict";
-    loginSchema = z.object({
-      email: z.string().email(),
-      password: z.string().min(1)
-    });
-    registerSchema = z.object({
-      name: z.string().min(2),
-      email: z.string().email(),
-      password: z.string().min(6)
-    });
-    questionFormSchema = z.object({
-      date: z.string().min(1),
-      sessionTitle: z.string().min(1),
-      questions: z.array(z.object({
-        topic: z.string().min(1),
-        question: z.string().min(1),
-        type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
-        options: z.array(z.string()).optional(),
-        correctAnswer: z.union([z.string(), z.number()]).optional(),
-        explanation: z.string().optional()
-      })).min(1)
-    });
-    testFormSchema = z.object({
-      date: z.string().min(1),
-      sessionTitle: z.string().min(1),
-      questionAnswers: z.array(z.object({
-        topic: z.string().min(1),
-        question: z.string().min(1),
-        type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
-        answer: z.union([z.string().min(1), z.number()]),
-        options: z.array(z.string()).optional(),
-        correctAnswer: z.union([z.string(), z.number()]).optional()
-      })).min(1),
-      overallUnderstanding: z.string().min(1),
-      remarks: z.string().optional()
-    });
-    evaluationSchema = z.object({
-      questionAnswers: z.array(z.object({
-        topic: z.string(),
-        question: z.string(),
-        type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
-        answer: z.union([z.string(), z.number()]),
-        options: z.array(z.string()).optional(),
-        correctAnswer: z.union([z.string(), z.number()]).optional(),
-        score: z.number().min(0).max(100),
-        feedback: z.string().optional()
-      })),
-      overallFeedback: z.string().optional()
-    });
-    updateSubmissionSchema = z.object({
-      status: z.string().optional(),
-      remarks: z.string().optional(),
-      evaluation: z.object({
-        totalScore: z.number(),
-        maxScore: z.number(),
-        percentage: z.number(),
-        grade: z.string(),
-        evaluatedBy: z.string(),
-        evaluatedAt: z.string(),
-        overallFeedback: z.string().optional()
-      }).optional()
-    });
-    createUserSchema = z.object({
-      name: z.string().min(2),
-      email: z.string().email(),
-      password: z.string().min(6),
-      role: z.enum(["trainee", "admin", "superadmin"])
-    });
-    COLLECTIONS = {
-      USERS: "users",
-      QUESTIONS: "questions",
-      SUBMISSIONS: "submissions"
-    };
-  }
-});
-
 // server/storage.ts
 var storage_exports = {};
 __export(storage_exports, {
-  MongoStorage: () => MongoStorage,
   storage: () => storage
 });
-import bcrypt from "bcryptjs";
+import { join } from "path";
 import { ObjectId } from "mongodb";
-var MongoStorage, storage;
+import bcrypt from "bcryptjs";
+var Storage, storage;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
     init_db();
-    init_schema();
-    MongoStorage = class {
-      usersCollection;
-      questionsCollection;
-      submissionsCollection;
-      constructor() {
-        this.usersCollection = null;
-        this.questionsCollection = null;
-        this.submissionsCollection = null;
-      }
-      async initializeCollections() {
-        if (!this.usersCollection) {
+    Storage = class {
+      dataDir = join(process.cwd(), "server", "data");
+      async initializeDatabase() {
+        try {
           const db2 = await connectToDatabase();
-          this.usersCollection = db2.collection(COLLECTIONS.USERS);
-          this.questionsCollection = db2.collection(COLLECTIONS.QUESTIONS);
-          this.submissionsCollection = db2.collection(COLLECTIONS.SUBMISSIONS);
+          console.log("Connected to MongoDB successfully");
+          await db2.collection("users").createIndex({ email: 1 }, { unique: true });
+          await db2.collection("submissions").createIndex({ userId: 1 });
+          await db2.collection("submissions").createIndex({ questionSetId: 1 });
+          await db2.collection("submissions").createIndex({ date: 1 });
+          await db2.collection("questions").createIndex({ date: 1 });
+          await this.createSuperAdminIfNeeded();
+        } catch (error) {
+          console.error("Database initialization error:", error);
+          throw error;
         }
       }
-      transformDocumentToUser(doc) {
-        return {
-          ...doc,
-          id: doc._id.toString()
-        };
+      async createSuperAdminIfNeeded() {
+        try {
+          const db2 = await connectToDatabase();
+          const superAdmin = await db2.collection("users").findOne({ role: "superadmin" });
+          if (!superAdmin) {
+            const hashedPassword = await bcrypt.hash("admin123", 10);
+            const superAdminUser = {
+              name: "Super Admin",
+              email: "admin@example.com",
+              password: hashedPassword,
+              role: "superadmin",
+              createdAt: /* @__PURE__ */ new Date()
+            };
+            await db2.collection("users").insertOne(superAdminUser);
+            console.log("Super admin created: admin@example.com / admin123");
+          }
+        } catch (error) {
+          console.error("Error creating super admin:", error);
+        }
       }
-      transformDocumentToQuestion(doc) {
-        return {
-          ...doc,
-          id: doc._id.toString()
-        };
-      }
-      transformDocumentToSubmission(doc) {
-        return {
-          ...doc,
-          id: doc._id.toString()
-        };
-      }
-      async initializeSuperAdmin() {
-        await this.initializeCollections();
-        const existingSuperAdmin = await this.usersCollection.findOne({ role: "superadmin" });
-        if (existingSuperAdmin) return;
-        const hashedPassword = await bcrypt.hash("admin123", 10);
-        await this.usersCollection.insertOne({
-          name: "Super Admin",
-          email: "admin@admin.com",
-          password: hashedPassword,
-          role: "superadmin",
-          createdAt: /* @__PURE__ */ new Date()
-        });
+      // User methods
+      async getAllUsers() {
+        const db2 = await connectToDatabase();
+        const users = await db2.collection("users").find({}).toArray();
+        return users.map((user) => ({
+          ...user,
+          id: user._id.toString()
+        }));
       }
       async getUser(id) {
-        await this.initializeCollections();
-        const doc = await this.usersCollection.findOne({ _id: new ObjectId(id) });
-        return doc ? this.transformDocumentToUser(doc) : void 0;
+        try {
+          const db2 = await connectToDatabase();
+          const user = await db2.collection("users").findOne({ _id: new ObjectId(id) });
+          if (!user) return null;
+          return {
+            ...user,
+            id: user._id.toString()
+          };
+        } catch (error) {
+          console.error("Error getting user:", error);
+          return null;
+        }
       }
       async getUserByEmail(email) {
-        await this.initializeCollections();
-        const doc = await this.usersCollection.findOne({ email });
-        return doc ? this.transformDocumentToUser(doc) : void 0;
+        try {
+          const db2 = await connectToDatabase();
+          const user = await db2.collection("users").findOne({ email });
+          if (!user) return null;
+          return {
+            ...user,
+            id: user._id.toString()
+          };
+        } catch (error) {
+          console.error("Error getting user by email:", error);
+          return null;
+        }
       }
       async createUser(userData) {
-        await this.initializeCollections();
+        const db2 = await connectToDatabase();
         const hashedPassword = await bcrypt.hash(userData.password, 10);
-        const userToInsert = {
+        const user = {
           ...userData,
           password: hashedPassword,
           createdAt: /* @__PURE__ */ new Date()
         };
-        const result = await this.usersCollection.insertOne(userToInsert);
-        const createdUser = await this.usersCollection.findOne({ _id: result.insertedId });
-        if (!createdUser) {
-          throw new Error("Failed to create user");
-        }
-        return this.transformDocumentToUser(createdUser);
+        const result = await db2.collection("users").insertOne(user);
+        const createdUser = await db2.collection("users").findOne({ _id: result.insertedId });
+        return {
+          ...createdUser,
+          id: createdUser._id.toString()
+        };
       }
       async updateUser(id, updates) {
-        await this.initializeCollections();
-        const updateData = { ...updates };
-        delete updateData.id;
-        delete updateData._id;
-        if (updateData.password) {
-          updateData.password = await bcrypt.hash(updateData.password, 10);
+        try {
+          const db2 = await connectToDatabase();
+          const result = await db2.collection("users").findOneAndUpdate(
+            { _id: new ObjectId(id) },
+            { $set: { ...updates, updatedAt: /* @__PURE__ */ new Date() } },
+            { returnDocument: "after" }
+          );
+          if (!result) return null;
+          return {
+            ...result,
+            id: result._id.toString()
+          };
+        } catch (error) {
+          console.error("Error updating user:", error);
+          return null;
         }
-        const result = await this.usersCollection.findOneAndUpdate(
-          { _id: new ObjectId(id) },
-          { $set: updateData },
-          { returnDocument: "after" }
-        );
-        return result ? this.transformDocumentToUser(result) : void 0;
       }
       async deleteUser(id) {
-        await this.initializeCollections();
-        const result = await this.usersCollection.deleteOne({ _id: new ObjectId(id) });
-        return result.deletedCount === 1;
+        try {
+          const db2 = await connectToDatabase();
+          const user = await this.getUser(id);
+          if (user?.role === "superadmin") {
+            return false;
+          }
+          const result = await db2.collection("users").deleteOne({ _id: new ObjectId(id) });
+          return result.deletedCount > 0;
+        } catch (error) {
+          console.error("Error deleting user:", error);
+          return false;
+        }
       }
-      async getAllUsers() {
-        await this.initializeCollections();
-        const docs = await this.usersCollection.find({}).toArray();
-        return docs.map((doc) => this.transformDocumentToUser(doc));
-      }
-      async getQuestion(id) {
-        await this.initializeCollections();
-        const doc = await this.questionsCollection.findOne({ _id: new ObjectId(id) });
-        return doc ? this.transformDocumentToQuestion(doc) : void 0;
+      // Question methods
+      async getAllQuestions() {
+        const db2 = await connectToDatabase();
+        const questions = await db2.collection("questions").find({}).sort({ date: -1 }).toArray();
+        return questions.map((q) => ({
+          ...q,
+          id: q._id.toString()
+        }));
       }
       async getQuestionsByDate(date) {
-        await this.initializeCollections();
-        const docs = await this.questionsCollection.find({ date }).toArray();
-        return docs.map((doc) => this.transformDocumentToQuestion(doc));
+        const db2 = await connectToDatabase();
+        const questions = await db2.collection("questions").find({ date }).toArray();
+        return questions.map((q) => ({
+          ...q,
+          id: q._id.toString()
+        }));
       }
       async createQuestion(questionData) {
-        await this.initializeCollections();
-        const questionToInsert = {
+        const db2 = await connectToDatabase();
+        const question = {
           ...questionData,
           createdAt: /* @__PURE__ */ new Date()
         };
-        const result = await this.questionsCollection.insertOne(questionToInsert);
-        const createdQuestion = await this.questionsCollection.findOne({ _id: result.insertedId });
-        if (!createdQuestion) {
-          throw new Error("Failed to create question");
-        }
-        return this.transformDocumentToQuestion(createdQuestion);
+        const result = await db2.collection("questions").insertOne(question);
+        const createdQuestion = await db2.collection("questions").findOne({ _id: result.insertedId });
+        return {
+          ...createdQuestion,
+          id: createdQuestion._id.toString()
+        };
       }
       async updateQuestion(id, updates) {
-        await this.initializeCollections();
-        const updateData = { ...updates };
-        delete updateData.id;
-        delete updateData._id;
-        const result = await this.questionsCollection.findOneAndUpdate(
-          { _id: new ObjectId(id) },
-          { $set: updateData },
-          { returnDocument: "after" }
-        );
-        return result ? this.transformDocumentToQuestion(result) : void 0;
+        try {
+          const db2 = await connectToDatabase();
+          const result = await db2.collection("questions").findOneAndUpdate(
+            { _id: new ObjectId(id) },
+            { $set: { ...updates, updatedAt: /* @__PURE__ */ new Date() } },
+            { returnDocument: "after" }
+          );
+          if (!result) return null;
+          return {
+            ...result,
+            id: result._id.toString()
+          };
+        } catch (error) {
+          console.error("Error updating question:", error);
+          return null;
+        }
       }
       async deleteQuestion(id) {
-        await this.initializeCollections();
-        const result = await this.questionsCollection.deleteOne({ _id: new ObjectId(id) });
-        return result.deletedCount === 1;
+        try {
+          const db2 = await connectToDatabase();
+          const result = await db2.collection("questions").deleteOne({ _id: new ObjectId(id) });
+          return result.deletedCount > 0;
+        } catch (error) {
+          console.error("Error deleting question:", error);
+          return false;
+        }
       }
-      async getAllQuestions() {
-        await this.initializeCollections();
-        const docs = await this.questionsCollection.find({}).toArray();
-        return docs.map((doc) => this.transformDocumentToQuestion(doc));
-      }
-      async getSubmission(id) {
-        await this.initializeCollections();
-        const doc = await this.submissionsCollection.findOne({ _id: new ObjectId(id) });
-        return doc ? this.transformDocumentToSubmission(doc) : void 0;
+      // Submission methods
+      async getAllSubmissions() {
+        const db2 = await connectToDatabase();
+        const submissions = await db2.collection("submissions").find({}).sort({ submittedAt: -1 }).toArray();
+        return submissions.map((s) => ({
+          ...s,
+          id: s._id.toString()
+        }));
       }
       async getSubmissionsByUser(userId) {
-        await this.initializeCollections();
-        const docs = await this.submissionsCollection.find({ userId: new ObjectId(userId) }).toArray();
-        return docs.map((doc) => this.transformDocumentToSubmission(doc));
-      }
-      async getSubmissionsByDate(date) {
-        await this.initializeCollections();
-        const docs = await this.submissionsCollection.find({ date }).toArray();
-        return docs.map((doc) => this.transformDocumentToSubmission(doc));
-      }
-      async createSubmission(submissionData) {
-        await this.initializeCollections();
-        const submissionToInsert = {
-          ...submissionData,
-          submittedAt: /* @__PURE__ */ new Date()
-        };
-        const result = await this.submissionsCollection.insertOne(submissionToInsert);
-        const createdSubmission = await this.submissionsCollection.findOne({ _id: result.insertedId });
-        if (!createdSubmission) {
-          throw new Error("Failed to create submission");
+        try {
+          const db2 = await connectToDatabase();
+          console.log("Getting submissions for user ID:", userId);
+          const submissions = await db2.collection("submissions").find({
+            userId: new ObjectId(userId)
+          }).sort({ submittedAt: -1 }).toArray();
+          console.log("Found submissions:", submissions.length);
+          return submissions.map((s) => ({
+            ...s,
+            id: s._id.toString()
+          }));
+        } catch (error) {
+          console.error("Error getting submissions by user:", error);
+          return [];
         }
-        return this.transformDocumentToSubmission(createdSubmission);
-      }
-      async getAllSubmissions() {
-        await this.initializeCollections();
-        const docs = await this.submissionsCollection.find({}).toArray();
-        return docs.map((doc) => this.transformDocumentToSubmission(doc));
-      }
-      async updateSubmission(id, updates) {
-        await this.initializeCollections();
-        const updateData = { ...updates };
-        delete updateData.id;
-        delete updateData._id;
-        const result = await this.submissionsCollection.findOneAndUpdate(
-          { _id: new ObjectId(id) },
-          { $set: updateData },
-          { returnDocument: "after" }
-        );
-        return result ? this.transformDocumentToSubmission(result) : void 0;
-      }
-      async deleteSubmission(id) {
-        await this.initializeCollections();
-        const result = await this.submissionsCollection.deleteOne({ _id: new ObjectId(id) });
-        return result.deletedCount === 1;
       }
       async getSubmissionByUserAndDate(userId, date) {
-        await this.initializeCollections();
-        const submission = await this.submissionsCollection.findOne({
-          userId: new ObjectId(userId),
-          date
+        try {
+          const db2 = await connectToDatabase();
+          const submission = await db2.collection("submissions").findOne({
+            userId: new ObjectId(userId),
+            date
+          });
+          if (!submission) return null;
+          return {
+            ...submission,
+            id: submission._id.toString()
+          };
+        } catch (error) {
+          console.error("Error getting submission by user and date:", error);
+          return null;
+        }
+      }
+      async getSubmissionByUserAndQuestionSet(userId, questionSetId) {
+        try {
+          const db2 = await connectToDatabase();
+          console.log("Looking for submission - User ID:", userId, "Question Set ID:", questionSetId);
+          const submission = await db2.collection("submissions").findOne({
+            userId: new ObjectId(userId),
+            questionSetId: new ObjectId(questionSetId)
+          });
+          if (!submission) {
+            console.log("No existing submission found");
+            return null;
+          }
+          console.log("Found existing submission:", submission._id);
+          return {
+            ...submission,
+            id: submission._id.toString()
+          };
+        } catch (error) {
+          console.error("Error getting submission by user and question set:", error);
+          return null;
+        }
+      }
+      async createSubmission(submissionData) {
+        const db2 = await connectToDatabase();
+        console.log("Creating submission with data:", {
+          ...submissionData,
+          userId: submissionData.userId.toString(),
+          questionSetId: submissionData.questionSetId.toString()
         });
-        return submission ? this.transformDocumentToSubmission(submission) : null;
+        const submission = {
+          ...submissionData,
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        };
+        const result = await db2.collection("submissions").insertOne(submission);
+        const createdSubmission = await db2.collection("submissions").findOne({ _id: result.insertedId });
+        console.log("Submission created with ID:", createdSubmission._id);
+        return {
+          ...createdSubmission,
+          id: createdSubmission._id.toString()
+        };
+      }
+      async updateSubmission(id, updates) {
+        try {
+          const db2 = await connectToDatabase();
+          console.log("Updating submission ID:", id);
+          console.log("Update data:", updates);
+          const result = await db2.collection("submissions").findOneAndUpdate(
+            { _id: new ObjectId(id) },
+            { $set: { ...updates, updatedAt: /* @__PURE__ */ new Date() } },
+            { returnDocument: "after" }
+          );
+          if (!result) {
+            console.log("Submission not found for update");
+            return null;
+          }
+          console.log("Submission updated successfully");
+          return {
+            ...result,
+            id: result._id.toString()
+          };
+        } catch (error) {
+          console.error("Error updating submission:", error);
+          return null;
+        }
+      }
+      async deleteSubmission(id) {
+        try {
+          const db2 = await connectToDatabase();
+          const result = await db2.collection("submissions").deleteOne({ _id: new ObjectId(id) });
+          return result.deletedCount > 0;
+        } catch (error) {
+          console.error("Error deleting submission:", error);
+          return false;
+        }
       }
     };
-    storage = new MongoStorage();
+    storage = new Storage();
   }
 });
 
@@ -624,8 +639,77 @@ function generateToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
 }
 
+// shared/schema.ts
+import { z } from "zod";
+var loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1)
+});
+var registerSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6)
+});
+var questionFormSchema = z.object({
+  date: z.string().min(1),
+  sessionTitle: z.string().min(1),
+  questions: z.array(z.object({
+    topic: z.string().min(1),
+    question: z.string().min(1),
+    type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional(),
+    explanation: z.string().optional()
+  })).min(1)
+});
+var testFormSchema = z.object({
+  date: z.string().min(1),
+  sessionTitle: z.string().min(1),
+  questionAnswers: z.array(z.object({
+    topic: z.string().min(1),
+    question: z.string().min(1),
+    type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
+    answer: z.union([z.string().min(1), z.number()]),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional()
+  })).min(1),
+  overallUnderstanding: z.string().min(1),
+  remarks: z.string().optional()
+});
+var evaluationSchema = z.object({
+  questionAnswers: z.array(z.object({
+    topic: z.string(),
+    question: z.string(),
+    type: z.enum(["text", "multiple-choice", "choose-best", "true-false", "fill-blank"]),
+    answer: z.union([z.string(), z.number()]),
+    options: z.array(z.string()).optional(),
+    correctAnswer: z.union([z.string(), z.number()]).optional(),
+    score: z.number().min(0).max(100),
+    feedback: z.string().optional()
+  })),
+  overallFeedback: z.string().optional()
+});
+var updateSubmissionSchema = z.object({
+  status: z.string().optional(),
+  remarks: z.string().optional(),
+  evaluation: z.object({
+    totalScore: z.number(),
+    maxScore: z.number(),
+    percentage: z.number(),
+    grade: z.string(),
+    evaluatedBy: z.string(),
+    evaluatedAt: z.string(),
+    overallFeedback: z.string().optional()
+  }).optional()
+});
+var createUserSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(["trainee", "admin", "superadmin"])
+});
+
 // server/routes.ts
-init_schema();
 import { z as z2 } from "zod";
 
 // server/config/google-oauth.ts
@@ -895,6 +979,7 @@ async function registerRoutes(app2) {
         const submissions = await storage.getSubmissionsByUser(req.user.id);
         res.json(submissions);
       } catch (error) {
+        console.error("Error fetching user submissions:", error);
         res.status(500).json({ message: "Server error" });
       }
     }
@@ -908,6 +993,7 @@ async function registerRoutes(app2) {
         const submissions = await storage.getAllSubmissions();
         res.json(submissions);
       } catch (error) {
+        console.error("Error fetching all submissions:", error);
         res.status(500).json({ message: "Server error" });
       }
     }
@@ -919,6 +1005,7 @@ async function registerRoutes(app2) {
     async (req, res) => {
       try {
         console.log("Submission request body:", req.body);
+        console.log("User from token:", req.user);
         const {
           id,
           questionSetId,
@@ -927,32 +1014,38 @@ async function registerRoutes(app2) {
           questionAnswers,
           overallUnderstanding,
           status,
-          remarks
+          remarks,
+          submittedAt
         } = req.body;
         if (!questionSetId || !date || !sessionTitle || !Array.isArray(questionAnswers)) {
           return res.status(400).json({ message: "Invalid request data" });
         }
+        const userId = req.user.id;
+        console.log("Processing submission for user ID:", userId);
         if (id) {
+          console.log("Updating existing submission:", id);
           const updatedSubmission = await storage.updateSubmission(id, {
             questionSetId: new ObjectId2(questionSetId),
             sessionTitle,
             questionAnswers,
-            overallUnderstanding,
-            status,
-            remarks,
-            submittedAt: status === "submitted" ? /* @__PURE__ */ new Date() : void 0
+            overallUnderstanding: overallUnderstanding || "Average",
+            status: status || "Completed",
+            remarks: remarks || "",
+            submittedAt: submittedAt ? new Date(submittedAt) : status === "Completed" ? /* @__PURE__ */ new Date() : void 0
           });
           if (!updatedSubmission) {
             return res.status(404).json({ message: "Submission not found" });
           }
+          console.log("Submission updated successfully:", updatedSubmission._id);
           return res.status(200).json(updatedSubmission);
         }
-        const existingSubmission = await storage.getSubmissionByUserAndDate(
-          req.user.id,
-          date
+        const existingSubmission = await storage.getSubmissionByUserAndQuestionSet(
+          userId,
+          questionSetId
         );
         if (existingSubmission) {
-          if (existingSubmission.evaluation && status === "submitted") {
+          console.log("Found existing submission:", existingSubmission._id);
+          if (existingSubmission.evaluation && status === "Completed") {
             return res.status(400).json({
               message: "Test has already been evaluated and cannot be resubmitted"
             });
@@ -963,29 +1056,35 @@ async function registerRoutes(app2) {
               questionSetId: new ObjectId2(questionSetId),
               sessionTitle,
               questionAnswers,
-              overallUnderstanding,
-              status,
-              remarks,
-              submittedAt: status === "submitted" || status === "completed" ? /* @__PURE__ */ new Date() : existingSubmission.submittedAt
+              overallUnderstanding: overallUnderstanding || "Average",
+              status: status || "Completed",
+              remarks: remarks || "",
+              submittedAt: submittedAt ? new Date(submittedAt) : status === "Completed" ? /* @__PURE__ */ new Date() : existingSubmission.submittedAt
             }
           );
+          console.log("Existing submission updated:", updatedSubmission?._id);
           return res.status(200).json(updatedSubmission);
         }
+        console.log("Creating new submission for user:", userId);
         const submission = await storage.createSubmission({
           questionSetId: new ObjectId2(questionSetId),
           date,
           sessionTitle,
           questionAnswers,
-          overallUnderstanding: overallUnderstanding || "",
-          status,
+          overallUnderstanding: overallUnderstanding || "Average",
+          status: status || "Completed",
           remarks: remarks || "",
-          userId: new ObjectId2(req.user.id),
-          submittedAt: status === "submitted" || status === "completed" ? /* @__PURE__ */ new Date() : void 0
+          userId: new ObjectId2(userId),
+          submittedAt: submittedAt ? new Date(submittedAt) : status === "Completed" ? /* @__PURE__ */ new Date() : void 0
         });
+        console.log("New submission created:", submission._id);
         res.status(201).json(submission);
       } catch (error) {
         console.error("Submission validation error:", error);
-        res.status(400).json({ message: "Invalid request data" });
+        res.status(400).json({
+          message: "Invalid request data",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
       }
     }
   );
@@ -997,15 +1096,19 @@ async function registerRoutes(app2) {
       try {
         const { id } = req.params;
         const updates = req.body;
+        console.log("Updating submission:", id);
+        console.log("Update data:", updates);
         if (updates.evaluation) {
           const user = await storage.getUser(req.user.id);
           updates.evaluation.evaluatedBy = user?.name || req.user.email;
           updates.evaluation.evaluatedAt = (/* @__PURE__ */ new Date()).toISOString();
+          updates.status = "Evaluated";
         }
         const submission = await storage.updateSubmission(id, updates);
         if (!submission) {
           return res.status(404).json({ message: "Submission not found" });
         }
+        console.log("Submission updated successfully:", submission._id);
         res.json(submission);
       } catch (error) {
         console.error("Submission update error:", error);
@@ -1413,7 +1516,7 @@ async function startServer() {
   try {
     await connectToDatabase();
     const { storage: storage2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
-    await storage2.initializeSuperAdmin();
+    await storage2.initializeDatabase();
     const server = await registerRoutes(app);
     app.use((err, _req, res, _next) => {
       const status = err.status || err.statusCode || 500;
