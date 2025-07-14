@@ -84,18 +84,39 @@ export default function TraineeDashboard() {
   });
 
   // Filter active sessions that trainee can take
-  const availableSessions = sessions.filter((session: TestSession) => session.status === 'active');
+  const availableSessions = sessions.filter((session: TestSession) => {
+    // Only show sessions that don't have attempts yet
+    const hasAttempt = myAttempts.some((a: TestAttempt) => a.sessionId.toString() === session._id?.toString());
+    return session.status === 'active' && !hasAttempt;
+  });
   
   // Get sessions with attempts
   const sessionsWithAttempts = sessions.map((session: TestSession) => {
-    const attempt = myAttempts.find((a: TestAttempt) => a.sessionId.toString() === session._id?.toString());
-    const evaluation = attempt ? myEvaluations.find((e: TestEvaluation) => e.attemptId.toString() === attempt._id?.toString()) : null;
+    const attempt = myAttempts.find((a: TestAttempt) => {
+      const sessionId = typeof a.sessionId === 'string' ? a.sessionId : a.sessionId.toString();
+      const currentSessionId = typeof session._id === 'string' ? session._id : session._id?.toString();
+      return sessionId === currentSessionId;
+    });
+    const evaluation = attempt ? myEvaluations.find((e: TestEvaluation) => {
+      const attemptId = typeof e.attemptId === 'string' ? e.attemptId : e.attemptId.toString();
+      const currentAttemptId = typeof attempt._id === 'string' ? attempt._id : attempt._id?.toString();
+      return attemptId === currentAttemptId;
+    }) : null;
+    
+    let status = 'available';
+    if (evaluation) {
+      status = 'evaluated';
+    } else if (attempt && (attempt.status === 'submitted' || attempt.status === 'evaluated')) {
+      status = 'submitted';
+    } else if (attempt) {
+      status = 'in-progress';
+    }
     
     return {
       session,
       attempt,
       evaluation,
-      status: evaluation ? 'evaluated' : attempt ? 'submitted' : 'available'
+      status
     };
   });
 
@@ -111,6 +132,8 @@ export default function TraineeDashboard() {
     switch (status) {
       case 'available':
         return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'in-progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'submitted':
         return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'evaluated':
@@ -124,10 +147,12 @@ export default function TraineeDashboard() {
     switch (status) {
       case 'available':
         return <Play className="w-3 h-3" />;
-      case 'submitted':
+      case 'in-progress':
         return <Clock className="w-3 h-3" />;
-      case 'evaluated':
+      case 'submitted':
         return <CheckCircle className="w-3 h-3" />;
+      case 'evaluated':
+        return <Trophy className="w-3 h-3" />;
       default:
         return <AlertCircle className="w-3 h-3" />;
     }
@@ -259,10 +284,7 @@ export default function TraineeDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {availableSessions.map((session: TestSession) => {
-                      const hasAttempt = myAttempts.some((a: TestAttempt) => a.sessionId.toString() === session._id?.toString());
-                      
-                      return (
+                    {availableSessions.map((session: TestSession) => (
                         <Card key={session._id?.toString()} className="border-2 border-teal-100 hover:border-teal-300 transition-all duration-200 bg-gradient-to-br from-white to-teal-50">
                           <CardContent className="p-6">
                             <div className="space-y-4">
@@ -290,20 +312,15 @@ export default function TraineeDashboard() {
 
                               <Button
                                 onClick={() => handleStartTest(session)}
-                                disabled={hasAttempt}
-                                className={`w-full ${hasAttempt 
-                                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-                                  : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-md'
-                                }`}
+                                className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-md"
                               >
                                 <Play className="w-4 h-4 mr-2" />
-                                {hasAttempt ? 'Already Attempted' : 'Start Test'}
+                                Start Test
                               </Button>
                             </div>
                           </CardContent>
                         </Card>
-                      );
-                    })}
+                      ))}
                   </div>
                 )}
               </CardContent>

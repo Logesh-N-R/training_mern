@@ -62,40 +62,42 @@ export function TestManagement({ userRole }: TestManagementProps) {
     queryFn: () => ApiService.get('/api/questions'),
   });
 
-  const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
-    queryKey: ['/api/submissions/my'],
-    queryFn: () => ApiService.get('/api/submissions/my'),
-    enabled: userRole === 'trainee',
+  const { data: submissions = [], isLoading } = useQuery({
+    queryKey: userRole === 'trainee' ? ['/api/test-attempts/my'] : ['/api/test-attempts'],
+    queryFn: () => ApiService.get(userRole === 'trainee' ? '/api/test-attempts/my' : '/api/test-attempts'),
   });
 
   // Process test statuses
   const testStatuses: TestStatus[] = questions.map((question: TestQuestion) => {
-    const submission = submissions.find((sub: Submission) => 
-      sub.questionSetId === question._id || sub.date === question.date
-    );
+    const attempt = submissions.find((a: any) => 
+          a.sessionId === question._id || 
+          (question.sessionTitle && a.sessionTitle?.includes(question.sessionTitle))
+        );
 
-    let status: 'not_started' | 'saved' | 'submitted' | 'evaluated' = 'not_started';
-    let canEdit = true;
+        let status = 'not_started';
+        let canEdit = false;
+        let submissionId = null;
+        let score = null;
+        let evaluation = null;
 
-    if (submission) {
-      if (submission.evaluation) {
-        status = 'evaluated';
-        canEdit = false;
-      } else if (submission.status === 'submitted') {
-        status = 'submitted';
-        canEdit = false;
-      } else if (submission.status === 'saved') {
-        status = 'saved';
-        canEdit = true;
-      } else {
-        status = 'saved';
-        canEdit = true;
-      }
-    }
+        if (attempt) {
+          submissionId = attempt._id;
+          if (attempt.status === 'submitted' || attempt.status === 'evaluated') {
+            status = attempt.status === 'evaluated' ? 'evaluated' : 'submitted';
+            // Check if there's an evaluation for this attempt
+            if (attempt.evaluation) {
+              evaluation = attempt.evaluation;
+              score = `${evaluation.percentage}% (${evaluation.grade})`;
+            }
+          } else if (attempt.status === 'in-progress') {
+            status = 'saved';
+            canEdit = true;
+          }
+        }
 
     return {
       question,
-      submission,
+      submission: attempt,
       status,
       canEdit
     };
@@ -147,7 +149,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
     setIsTestModalOpen(false);
     setSelectedTest(null);
     setIsViewMode(false);
-    queryClient.invalidateQueries({ queryKey: ['/api/submissions/my'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/test-attempts/my'] });
   };
 
   const formatDate = (dateString: string) => {
@@ -158,7 +160,7 @@ export function TestManagement({ userRole }: TestManagementProps) {
     });
   };
 
-  if (loadingQuestions || (userRole === 'trainee' && loadingSubmissions)) {
+  if (loadingQuestions || (userRole === 'trainee' && isLoading)) {
     return (
       <Card>
         <CardContent className="pt-6">
