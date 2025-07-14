@@ -25,6 +25,9 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
 
     if (token) {
       localStorage.setItem('token', token);
+      // Clear URL parameters without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Trigger auth context to refresh user state
       window.location.reload();
     } else if (error) {
       toast({
@@ -32,6 +35,8 @@ export default function Login({ onNavigateToRegister }: LoginProps) {
         description: "Google sign-in failed. Please try again.",
         variant: "destructive",
       });
+      // Clear error parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [toast]);
 

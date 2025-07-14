@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
@@ -71,7 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogle = async () => {
-    window.location.href = '/api/auth/google';
+    // For now, disable Google OAuth to avoid URL redirects
+    toast({
+      title: "Google OAuth Unavailable",
+      description: "Google sign-in is temporarily disabled to maintain state-based navigation.",
+      variant: "destructive",
+    });
   };
 
   const logout = () => {

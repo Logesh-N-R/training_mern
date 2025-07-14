@@ -16,6 +16,13 @@ const AppContent = React.memo(() => {
   const { user, isLoading } = useAuth();
   const [currentView, setCurrentView] = React.useState<'login' | 'register' | 'dashboard'>('login');
 
+  // Clear any URL routing on app load
+  React.useEffect(() => {
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, []);
+
   // Auto-navigate based on user state
   React.useEffect(() => {
     if (!isLoading) {
