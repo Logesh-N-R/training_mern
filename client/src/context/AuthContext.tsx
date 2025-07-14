@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Authorization': `Bearer ${authToken}`,
         },
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -61,11 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
     const data = await response.json();
-    
+
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
-    
+
     // Ensure URL stays at root after login
     window.history.replaceState({}, document.title, '/');
   };
@@ -73,22 +73,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     const response = await apiRequest('POST', '/api/auth/register', { name, email, password });
     const data = await response.json();
-    
+
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
-    
+
     // Ensure URL stays at root after register
     window.history.replaceState({}, document.title, '/');
   };
 
   const loginWithGoogle = async () => {
-    // For now, disable Google OAuth to avoid URL redirects
-    toast({
-      title: "Google OAuth Unavailable",
-      description: "Google sign-in is temporarily disabled to maintain state-based navigation.",
-      variant: "destructive",
-    });
+    try {
+      // Redirect to Google OAuth endpoint
+      window.location.href = '/api/auth/google';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to initiate Google sign-in",
+        variant: "destructive",
+      });
+    }
   };
 
   const logout = () => {
